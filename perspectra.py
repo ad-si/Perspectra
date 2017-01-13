@@ -93,6 +93,47 @@ def onclick (event):
     )
 
 
+def render_processing_steps (**kwargs):
+    fig, ((pos0, pos1), (pos2, pos3), (pos4, pos5),
+      (pos6, pos7), (pos8, pos9)) = pyplot.subplots(
+        nrows=5,
+        ncols=2,
+        figsize=(10, 14)
+    )
+
+    pos0.set_title('1. Resized image')
+    pos0.imshow(kwargs['resized_image'])
+
+    pos1.set_title('2. Luminance')
+    pos1.imshow(kwargs['scaled_gray_image'], cmap=pyplot.cm.gray)
+
+    pos2.set_title('3. Blurred with Gaussian filter')
+    pos2.imshow(kwargs['blurred'], cmap=pyplot.cm.gray)
+
+    pos3.set_title('4. Edge detection with Sobel filter')
+    pos3.imshow(kwargs['elevation_map'])
+
+    pos4.set_title('5. Segmentation with watershed algorithm')
+    pos4.imshow(kwargs['segmented_image'], cmap=pyplot.cm.gray)
+
+    pos5.set_title('6. Harris corner image with corner peaks')
+    pos5.imshow(kwargs['harris_image'])
+    pos5.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
+
+    pos6.set_title('7. Original image with detected corners')
+    pos6.imshow(kwargs['resized_image'])
+    pos6.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
+
+    pos7.set_title('8. Corrected perspective and corrected size')
+    pos7.imshow(kwargs['warped_image'], cmap=pyplot.cm.gray)
+
+    pos8.set_title('9. Binarize with adaptive version of otsu\'s method')
+    pos8.imshow(kwargs['binary_otsu'], cmap=pyplot.cm.gray)
+
+    pos9.set_title('10. Binarize with adaptive version of otsu\'s method')
+    pos9.imshow(kwargs['binary_sauvola'], cmap=pyplot.cm.gray)
+
+
 image = load_image('images/document.png')
 gray_image = rgb2gray(image)
 
@@ -155,44 +196,17 @@ binary_adi = high_frequencies > thresh_adi
 
 binary_wtf = warped_image - skimage.filters.rank.median(warped_image, disk(radius))
 
-fig, ((pos0, pos1), (pos2, pos3), (pos4, pos5),
-  (pos6, pos7), (pos8, pos9)) = pyplot.subplots(
-    nrows=5,
-    ncols=2,
-    figsize=(10, 12)
+render_processing_steps(
+    resized_image = resized_image,
+    scaled_gray_image = scaled_gray_image,
+    blurred = blurred,
+    elevation_map = elevation_map,
+    segmented_image = segmented_image,
+    harris_image = harris_image,
+    warped_image = warped_image,
+    binary_otsu = binary_otsu,
+    binary_sauvola = binary_sauvola
 )
-
-pos0.imshow(resized_image)
-pos0.set_title('1. Resized image')
-
-pos1.imshow(scaled_gray_image)
-pos1.set_title('2. Luminance')
-
-pos2.imshow(blurred)
-pos2.set_title('3. Blurred with Gaussian filter')
-
-pos3.imshow(elevation_map)
-pos3.set_title('4. Edge detection with Sobel filter')
-
-pos4.imshow(segmented_image)
-pos4.set_title('5. Segmentation with watershed algorithm')
-
-pos5.imshow(harris_image)
-pos5.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
-pos5.set_title('6. Harris corner image with corner peaks')
-
-pos6.imshow(resized_image)
-pos6.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
-pos6.set_title('7. Original image with detected corners')
-
-pos7.imshow(warped_image)
-pos7.set_title('8. Corrected perspective and corrected size')
-
-pos8.imshow(binary_otsu, cmap=pyplot.cm.gray)
-pos8.set_title('9. Binarize with adaptive version of otsu\'s method')
-
-pos9.imshow(binary_sauvola, cmap=pyplot.cm.gray)
-pos9.set_title('10. Binarize with adaptive version of otsu\'s method')
 
 # cursor = Cursor(ax0, color='red', linewidth=1)
 
