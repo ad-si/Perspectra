@@ -1,4 +1,5 @@
 import os
+import argparse
 
 import numpy
 from numpy import linalg
@@ -127,15 +128,33 @@ def render_processing_steps (**kwargs):
     pos7.set_title('8. Corrected perspective and corrected size')
     pos7.imshow(kwargs['warped_image'], cmap=pyplot.cm.gray)
 
-    pos8.set_title('9. Binarize with adaptive version of otsu\'s method')
+    pos8.set_title('9. Binarize with adaptive version of Otsu\'s method')
     pos8.imshow(kwargs['binary_otsu'], cmap=pyplot.cm.gray)
 
-    pos9.set_title('10. Binarize with adaptive version of otsu\'s method')
+    pos9.set_title('10. Binarize with Sauvola\'s method')
     pos9.imshow(kwargs['binary_sauvola'], cmap=pyplot.cm.gray)
 
 
-image = load_image('images/document.png')
-gray_image = rgb2gray(image)
+parser = argparse.ArgumentParser()
+parser.add_argument('image', help='Path to image which shall be fixed')
+parser.add_argument(
+    '--debug',
+    help='Render debugging view',
+    action='store_true'
+)
+parser.add_argument(
+    '--gray',
+    help='Safe image in grayscale',
+    action='store_true'
+)
+parser.add_argument(
+    '--output',
+    help='Absolute output path of fixed image'
+)
+
+args = parser.parse_args()
+image_path = os.path.join(os.getcwd(), args.image)
+image = io.imread(image_path)
 
 intermediate_height = 500
 scale_ratio = intermediate_height / image.shape[0]
@@ -162,51 +181,56 @@ detected_corners = corner_peaks(harris_image, min_distance=5)
 sorted_corners = get_sorted_corners(detected_corners)
 scaled_corners = numpy.divide(sorted_corners, scale_ratio)
 
-warped_image = get_fixed_image(gray_image, scaled_corners)
+warped_image = get_fixed_image(image, scaled_corners)
+fixed_image = rgb2gray(warped_image) if args.gray else warped_image
 
 # Must always be odd (+ 1)
-radius = (image.size // 2 ** 17) + 1
-sigma = image.size // 2 ** 17
-print(radius, sigma)
-binary_adaptive = threshold_adaptive(warped_image, radius)
+# radius = (image.size // 2 ** 17) + 1
+# sigma = image.size // 2 ** 17
+# binary_adaptive = threshold_adaptive(warped_image, radius)
+#
+# thresh_niblack = skimage.filters.threshold_niblack(
+#     warped_image,
+#     window_size = radius,
+#     k=0.08,
+# )
+# binary_niblack = warped_image > thresh_niblack
+#
+# thresh_sauvola = skimage.filters.threshold_sauvola(
+#     warped_image,
+#     window_size = radius,
+#     k=0.04
+# )
+# binary_sauvola = warped_image > thresh_sauvola
+#
+# selem = disk(radius)
+# warped_image_ubyte = img_as_ubyte(warped_image)
+# local_otsu = rank.otsu(warped_image_ubyte, selem)
+# threshold_global_otsu = threshold_otsu(warped_image_ubyte)
+# binary_otsu = warped_image_ubyte >= local_otsu
+#
+# high_frequencies = warped_image - gaussian(warped_image, sigma=sigma)
+# thresh_adi = threshold_otsu(high_frequencies)
+# binary_adi = high_frequencies > thresh_adi
+#
+# binary_wtf = warped_image - skimage.filters.rank.median(warped_image, disk(radius))
 
-thresh_niblack = skimage.filters.threshold_niblack(
-    warped_image,
-    window_size = radius,
-    k=0.08,
-)
-binary_niblack = warped_image > thresh_niblack
+if args.debug:
+    render_processing_steps(
+        resized_image = resized_image,
+        scaled_gray_image = scaled_gray_image,
+        blurred = blurred,
+        elevation_map = elevation_map,
+        segmented_image = segmented_image,
+        harris_image = harris_image,
+        warped_image = warped_image,
+        binary_otsu = binary_otsu,
+        binary_sauvola = binary_sauvola
+    )
 
-thresh_sauvola = skimage.filters.threshold_sauvola(
-    warped_image,
-    window_size = radius,
-    k=0.04
-)
-binary_sauvola = warped_image > thresh_sauvola
-
-selem = disk(radius)
-warped_image_ubyte = img_as_ubyte(warped_image)
-local_otsu = rank.otsu(warped_image_ubyte, selem)
-threshold_global_otsu = threshold_otsu(warped_image_ubyte)
-binary_otsu = warped_image_ubyte >= local_otsu
-
-high_frequencies = warped_image - gaussian(warped_image, sigma=sigma)
-thresh_adi = threshold_otsu(high_frequencies)
-binary_adi = high_frequencies > thresh_adi
-
-binary_wtf = warped_image - skimage.filters.rank.median(warped_image, disk(radius))
-
-render_processing_steps(
-    resized_image = resized_image,
-    scaled_gray_image = scaled_gray_image,
-    blurred = blurred,
-    elevation_map = elevation_map,
-    segmented_image = segmented_image,
-    harris_image = harris_image,
-    warped_image = warped_image,
-    binary_otsu = binary_otsu,
-    binary_sauvola = binary_sauvola
-)
+else:
+    outpath = args.output if args.output else image_path + '-fixed.png'
+    io.imsave(outpath, fixed_image)
 
 # cursor = Cursor(ax0, color='red', linewidth=1)
 
