@@ -131,28 +131,34 @@ def render_processing_steps (**kwargs):
     pos8.set_title('9. Binarize with adaptive version of Otsu\'s method')
     pos8.imshow(kwargs['binary_otsu'], cmap=pyplot.cm.gray)
 
-    pos9.set_title('10. Binarize with Sauvola\'s method')
-    pos9.imshow(kwargs['binary_sauvola'], cmap=pyplot.cm.gray)
+    pos9.set_title('10. Binarize with adaptive version of Otsu\'s method')
+    pos9.imshow(kwargs['binary_otsu'], cmap=pyplot.cm.gray)
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('image', help='Path to image which shall be fixed')
-parser.add_argument(
-    '--debug',
-    help='Render debugging view',
-    action='store_true'
-)
-parser.add_argument(
-    '--gray',
-    help='Safe image in grayscale',
-    action='store_true'
-)
-parser.add_argument(
-    '--output',
-    help='Absolute output path of fixed image'
-)
+# parser.add_argument('image', help='Path to image which shall be fixed')
+# parser.add_argument(
+#     '--debug',
+#     help='Render debugging view',
+#     action='store_true'
+# )
+# parser.add_argument(
+#     '--gray',
+#     help='Safe image in grayscale',
+#     action='store_true'
+# )
+# parser.add_argument(
+#     '--output',
+#     help='Absolute output path of fixed image'
+# )
 
 args = parser.parse_args()
+args.debug = True
+args.gray = False
+args.binary = False
+args.niblack = False
+args.adaptive = False
+args.image = 'images/document.png'
 image_path = os.path.join(os.getcwd(), args.image)
 image = io.imread(image_path)
 
@@ -182,27 +188,40 @@ sorted_corners = get_sorted_corners(detected_corners)
 scaled_corners = numpy.divide(sorted_corners, scale_ratio)
 
 warped_image = get_fixed_image(image, scaled_corners)
-fixed_image = rgb2gray(warped_image) if args.gray else warped_image
+fixed_image = warped_image
 
-# Must always be odd (+ 1)
-# radius = (image.size // 2 ** 17) + 1
-# sigma = image.size // 2 ** 17
-# binary_adaptive = threshold_adaptive(warped_image, radius)
-#
-# thresh_niblack = skimage.filters.threshold_niblack(
-#     warped_image,
-#     window_size = radius,
-#     k=0.08,
-# )
-# binary_niblack = warped_image > thresh_niblack
-#
-# thresh_sauvola = skimage.filters.threshold_sauvola(
-#     warped_image,
-#     window_size = radius,
-#     k=0.04
-# )
-# binary_sauvola = warped_image > thresh_sauvola
-#
+if args.gray or args.debug:
+    fixed_image = rgb2gray(warped_image)
+
+if args.binary or args.debug:
+    # Must always be odd (+ 1)
+    radius = (image.size // 2 ** 17) + 1
+    gray_warped_image = rgb2gray(warped_image)
+    thresh_sauvola = skimage.filters.threshold_sauvola(
+        gray_warped_image,
+        window_size = radius,
+        k = 0.04
+    )
+    fixed_image = gray_warped_image > thresh_sauvola
+
+if args.adaptive or args.debug:
+    radius = (image.size // 2 ** 17) + 1
+    gray_warped_image = rgb2gray(warped_image)
+    fixed_image = threshold_adaptive(gray_warped_image, radius)
+
+if args.niblack or args.debug:
+    radius = (image.size // 2 ** 17) + 1
+    sigma = image.size // 2 ** 17
+    gray_warped_image = rgb2gray(warped_image)
+
+    thresh_niblack = skimage.filters.threshold_niblack(
+        gray_warped_image,
+        window_size = radius,
+        k=0.08,
+    )
+    fixed_image = gray_warped_image > thresh_niblack
+
+# if args.sauvola or args.debug:
 # selem = disk(radius)
 # warped_image_ubyte = img_as_ubyte(warped_image)
 # local_otsu = rank.otsu(warped_image_ubyte, selem)
@@ -224,19 +243,18 @@ if args.debug:
         segmented_image = segmented_image,
         harris_image = harris_image,
         warped_image = warped_image,
-        binary_otsu = binary_otsu,
-        binary_sauvola = binary_sauvola
+        binary_otsu = fixed_image,
+        # binary_sauvola = binary_sauvola
     )
+    pyplot.show()
 
 else:
     outpath = args.output if args.output else image_path + '-fixed.png'
     io.imsave(outpath, fixed_image)
 
-# cursor = Cursor(ax0, color='red', linewidth=1)
 
+# cursor = Cursor(ax0, color='red', linewidth=1)
 
 # figure = pyplot.figure()
 # pyplot.imshow(image)
 # figure.canvas.mpl_connect('button_press_event', onclick)
-
-pyplot.show()
