@@ -1,0 +1,20 @@
+{
+  "name": "jsx",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "make"
+  },
+  "keywords": [],
+  "author": "Adrian Sieber",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^14.0.0",
+    "eslint": "^3.14.1",
+    "eslint-config-javascript": "^1.2.0"
+  },
+  "eslintConfig": {
+    "extends": "eslint-config-javascript"
+  }
+}
