@@ -8,6 +8,22 @@ for and extensive list of alternative solutions.
 
 ## Usage
 
+### Command Line Interface
+
+```txt
+usage: perspectra [-h] [--debug] [--gray] [--output image-path] image-path
+
+positional arguments:
+  image-path           Path to image which shall be fixed
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --debug              Render debugging view
+  --gray               Safe image in grayscale
+  --output image-path  Output path of fixed image
+```
+
+
 ### With Docker (currently not wokring)
 
 Run with CPython
