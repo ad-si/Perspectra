@@ -3,7 +3,7 @@
 import os.path as path
 import argparse
 
-import transformer
+from .transformer import transform_image
 
 
 def execute_arguments (arguments):
@@ -15,9 +15,14 @@ def execute_arguments (arguments):
     )
     parser.add_argument(
         '--gray',
-        help='Safe image in grayscale',
+        help='Safe image as grayscale image',
         action='store_true',
         dest='output_in_gray',
+    )
+    parser.add_argument(
+        '--binary',
+        help='Safe image as binary image',
+        dest='binarization_method',
     )
     parser.add_argument(
         '--output',
@@ -39,4 +44,4 @@ def execute_arguments (arguments):
     if args.output_image_path:
         args.output_image_path = path.abspath(args.output_image_path)
 
-    transformer.transform_image(**vars(args))
+    transform_image(**vars(args))

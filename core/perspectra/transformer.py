@@ -1,5 +1,6 @@
 import os
 import base64
+from pathlib import Path
 
 import numpy
 from numpy import linalg
@@ -131,13 +132,59 @@ def render_processing_steps (**kwargs):
     pos6.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
 
     pos7.set_title('8. Corrected perspective and corrected size')
-    pos7.imshow(kwargs['warped_image'], cmap=pyplot.cm.gray)
+    pos7.imshow(kwargs['dewarped_image'], cmap=pyplot.cm.gray)
 
-    pos8.set_title('9. Binarize with adaptive version of Otsu\'s method')
-    pos8.imshow(kwargs['binary_otsu'], cmap=pyplot.cm.gray)
+    pos8.set_title('9. Binarize with niblack method')
+    pos8.imshow(kwargs['niblack_image'], cmap=pyplot.cm.gray)
 
-    pos9.set_title('10. Binarize with adaptive version of Otsu\'s method')
-    pos9.imshow(kwargs['binary_otsu'], cmap=pyplot.cm.gray)
+    pos9.set_title('10. Binarize with sauvola method')
+    pos9.imshow(kwargs['sauvola_image'], cmap=pyplot.cm.gray)
+
+
+def binarize (image, method = 'adaptive'):
+    radius = image.size // 2 ** 17
+    radius += 1 if (radius % 2 == 0) else 0 # Must always be odd
+
+    gray_image = rgb2gray(image)
+
+    if method == 'sauvola':
+        thresh_sauvola = skimage.filters.threshold_sauvola(
+            gray_image,
+            window_size = radius,
+            k = 0.04
+        )
+        return gray_image > thresh_sauvola
+
+    elif method == 'adaptive':
+        return threshold_adaptive(image, radius)
+
+    elif method == 'niblack':
+        sigma = image.size // 2 ** 17
+
+        thresh_niblack = skimage.filters.threshold_niblack(
+            image,
+            window_size = radius,
+            k = 0.08,
+        )
+        return image > thresh_niblack
+
+    elif method == 'sieber':
+        high_frequencies = image - gaussian(image, sigma=sigma)
+        thresh_sieber = threshold_otsu(high_frequencies)
+        return high_frequencies > thresh_adi
+        # binary_sieber = image - (skimage.filters.rank
+        #     .median(image, disk(radius))
+        #     .median(image, disk(radius))))
+
+    elif method == 'local-otsu':
+        warped_image_ubyte = img_as_ubyte(image)
+        selem = disk(radius)
+        local_otsu = rank.otsu(warped_image_ubyte, selem)
+        threshold_global_otsu = threshold_otsu(warped_image_ubyte)
+        binary_otsu = warped_image_ubyte >= local_otsu
+
+    else:
+        raise TypeError(f'{method} is no supported binarization method')
 
 
 def transform_image (**kwargs):
@@ -163,8 +210,7 @@ def transform_image (**kwargs):
         )
 
     output_in_gray = kwargs.get('output_in_gray', False)
-    output_binary = kwargs.get('output_binary', False)
-    binary_algorithms = kwargs.get('binary_algorithms', [])
+    binarization_method = kwargs.get('binarization_method') or 'sauvola'
     debug = kwargs.get('debug', False)
     input_image_path = kwargs.get('input_image_path')
     adaptive = kwargs.get('adaptive')
@@ -195,51 +241,12 @@ def transform_image (**kwargs):
     sorted_corners = get_sorted_corners(detected_corners)
     scaled_corners = numpy.divide(sorted_corners, scale_ratio)
 
-    warped_image = get_fixed_image(image, scaled_corners)
-    fixed_image = warped_image
-    gray_warped_image = rgb2gray(warped_image)
+    dewarped_image = get_fixed_image(image, scaled_corners)
 
-    # if output_in_gray or debug:
-    #     gray_warped_image = rgb2gray(warped_image)
-
-    if output_binary or debug:
-        # Must always be odd (+ 1)
-        radius = (image.size // 2 ** 17) + 1
-        thresh_sauvola = skimage.filters.threshold_sauvola(
-            gray_warped_image,
-            window_size = radius,
-            k = 0.04
-        )
-        fixed_image = gray_warped_image > thresh_sauvola
-
-    if adaptive or debug:
-        radius = (image.size // 2 ** 17) + 1
-        fixed_image = threshold_adaptive(gray_warped_image, radius)
-
-    if ('niblack' in binary_algorithms) or debug:
-        radius = (image.size // 2 ** 17) + 1
-        sigma = image.size // 2 ** 17
-
-        thresh_niblack = skimage.filters.threshold_niblack(
-            gray_warped_image,
-            window_size = radius,
-            k=0.08,
-        )
-        fixed_image = gray_warped_image > thresh_niblack
-
-    # if sauvola or debug:
-    # selem = disk(radius)
-    # warped_image_ubyte = img_as_ubyte(warped_image)
-    # local_otsu = rank.otsu(warped_image_ubyte, selem)
-    # threshold_global_otsu = threshold_otsu(warped_image_ubyte)
-    # binary_otsu = warped_image_ubyte >= local_otsu
-    #
-    # high_frequencies = warped_image - gaussian(warped_image, sigma=sigma)
-    # thresh_adi = threshold_otsu(high_frequencies)
-    # binary_adi = high_frequencies > thresh_adi
-    #
-    # binary_wtf = warped_image - skimage.filters.rank
-    #   .median(warped_image, disk(radius))
+    fixed_image = binarize(
+        image = dewarped_image,
+        method = binarization_method
+    )
 
     if debug:
         render_processing_steps(
@@ -249,19 +256,14 @@ def transform_image (**kwargs):
             elevation_map = elevation_map,
             segmented_image = segmented_image,
             harris_image = harris_image,
-            warped_image = warped_image,
-            binary_otsu = fixed_image,
+            dewarped_image = dewarped_image,
             sorted_corners = sorted_corners,
-            # binary_sauvola = binary_sauvola
+
+            # adaptive_image = adaptive_image,
+            # niblack_image = niblack_image,
+            sauvola_image = sauvola_image
         )
         pyplot.show()
 
     else:
         io.imsave(output_image_path, fixed_image)
-
-
-    # cursor = Cursor(ax0, color='red', linewidth=1)
-
-    # figure = pyplot.figure()
-    # pyplot.imshow(image)
-    # figure.canvas.mpl_connect('button_press_event', onclick)
