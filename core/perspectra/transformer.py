@@ -7,7 +7,7 @@ from numpy import linalg
 
 import skimage
 from skimage import filters, io, transform
-from skimage.color import rgb2gray
+from skimage.color import rgb2gray, label2rgb
 from skimage.draw import circle, circle_perimeter
 from skimage.feature import corner_harris, corner_peaks
 from skimage.filters import (
@@ -134,11 +134,8 @@ def render_processing_steps (**kwargs):
     pos7.set_title('8. Corrected perspective and corrected size')
     pos7.imshow(kwargs['dewarped_image'], cmap=pyplot.cm.gray)
 
-    pos8.set_title('9. Binarize with niblack method')
-    pos8.imshow(kwargs['niblack_image'], cmap=pyplot.cm.gray)
-
-    pos9.set_title('10. Binarize with sauvola method')
-    pos9.imshow(kwargs['sauvola_image'], cmap=pyplot.cm.gray)
+    pos8.set_title('9. Binarize')
+    pos8.imshow(kwargs['binarized_image'], cmap=pyplot.cm.gray)
 
 
 def binarize (image, method = 'sauvola'):
@@ -206,15 +203,19 @@ def transform_image (**kwargs):
         .replace('/', '_')
     )
 
-    output_image_path = kwargs.get('output_image_path') or \
-        os.path.join(
-            os.path.dirname(abs_input_image_path),
-            f'{basename}-fixed_{random_string}.png'
-        )
+    output_base_path = os.path.join(
+        os.path.dirname(abs_input_image_path),
+        basename
+    )
+    output_image_path = (
+        kwargs.get('output_image_path') or \
+        f'{output_base_path}-fixed_{random_string}.png'
+    )
 
     output_in_gray = kwargs.get('output_in_gray', False)
     binarization_method = kwargs.get('binarization_method')
     debug = kwargs.get('debug', False)
+    shall_plot_debug_view = kwargs.get('shall_plot_debug_view', False)
     input_image_path = kwargs.get('input_image_path')
     adaptive = kwargs.get('adaptive')
     image = io.imread(abs_input_image_path)
@@ -247,14 +248,36 @@ def transform_image (**kwargs):
     dewarped_image = get_fixed_image(image, scaled_corners)
 
     if binarization_method:
-        fixed_image = binarize(
+        binarized_image = binarize(
             image = dewarped_image,
             method = binarization_method
         )
+        fixed_image = binarized_image
     else:
         fixed_image = dewarped_image
 
+    def saveDebugImage (index, name, image):
+        io.imsave(
+            os.path.join(output_base_path, f'{index}-{name}.png'),
+            image
+        )
+
     if debug:
+        os.makedirs(output_base_path, exist_ok=True)
+        debug_images = [
+            ('resized_image', resized_image),
+            ('scaled_gray_image', scaled_gray_image),
+            ('blurred', blurred),
+            ('elevation_map', elevation_map),
+            ('segmented_image', label2rgb(segmented_image)),
+            ('harris_image', skimage.exposure.rescale_intensity(harris_image)),
+            ('dewarped_image', dewarped_image),
+            ('binarized_image', binarized_image),
+        ]
+        for index, (name, image) in enumerate(debug_images):
+            saveDebugImage(index + 1, name, image)
+
+    elif shall_plot_debug_view:
         render_processing_steps(
             resized_image = resized_image,
             scaled_gray_image = scaled_gray_image,
@@ -264,10 +287,7 @@ def transform_image (**kwargs):
             harris_image = harris_image,
             dewarped_image = dewarped_image,
             sorted_corners = sorted_corners,
-
-            # adaptive_image = adaptive_image,
-            # niblack_image = niblack_image,
-            sauvola_image = sauvola_image
+            binarized_image = binarized_image
         )
         pyplot.show()
 
