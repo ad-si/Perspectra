@@ -12,7 +12,7 @@ from skimage.draw import circle, circle_perimeter
 from skimage.feature import corner_harris, corner_peaks
 from skimage.filters import (
     rank, sobel, gaussian,
-    threshold_adaptive, threshold_otsu
+    threshold_adaptive, threshold_otsu, threshold_sauvola
 )
 from skimage.morphology import watershed, disk
 from skimage.util import img_as_ubyte
@@ -141,22 +141,21 @@ def render_processing_steps (**kwargs):
     pos9.imshow(kwargs['sauvola_image'], cmap=pyplot.cm.gray)
 
 
-def binarize (image, method = 'adaptive'):
-    radius = image.size // 2 ** 17
+def binarize (image, method = 'sauvola'):
+    radius = image.size // 2 ** 19
     radius += 1 if (radius % 2 == 0) else 0 # Must always be odd
 
     gray_image = rgb2gray(image)
 
     if method == 'sauvola':
-        thresh_sauvola = skimage.filters.threshold_sauvola(
-            gray_image,
+        thresh_sauvola = numpy.nan_to_num(threshold_sauvola(
+            image = gray_image,
             window_size = radius,
-            k = 0.04
-        )
-        return gray_image > thresh_sauvola
+        ))
+        binarized_image = gray_image > thresh_sauvola
 
     elif method == 'adaptive':
-        return threshold_adaptive(image, radius)
+        binarized_image = gray_image > threshold_adaptive(image, radius)
 
     elif method == 'niblack':
         sigma = image.size // 2 ** 17
@@ -166,12 +165,12 @@ def binarize (image, method = 'adaptive'):
             window_size = radius,
             k = 0.08,
         )
-        return image > thresh_niblack
+        binarized_image =  image > thresh_niblack
 
     elif method == 'sieber':
         high_frequencies = image - gaussian(image, sigma=sigma)
         thresh_sieber = threshold_otsu(high_frequencies)
-        return high_frequencies > thresh_adi
+        binarized_image = high_frequencies > thresh_adi
         # binary_sieber = image - (skimage.filters.rank
         #     .median(image, disk(radius))
         #     .median(image, disk(radius))))
@@ -185,6 +184,10 @@ def binarize (image, method = 'adaptive'):
 
     else:
         raise TypeError(f'{method} is no supported binarization method')
+
+    # Io.imsave can not save boolean arrays,
+    # therefore must be converted to ubyte
+    return skimage.img_as_ubyte(binarized_image)
 
 
 def transform_image (**kwargs):
@@ -210,7 +213,7 @@ def transform_image (**kwargs):
         )
 
     output_in_gray = kwargs.get('output_in_gray', False)
-    binarization_method = kwargs.get('binarization_method') or 'sauvola'
+    binarization_method = kwargs.get('binarization_method')
     debug = kwargs.get('debug', False)
     input_image_path = kwargs.get('input_image_path')
     adaptive = kwargs.get('adaptive')
@@ -243,10 +246,13 @@ def transform_image (**kwargs):
 
     dewarped_image = get_fixed_image(image, scaled_corners)
 
-    fixed_image = binarize(
-        image = dewarped_image,
-        method = binarization_method
-    )
+    if binarization_method:
+        fixed_image = binarize(
+            image = dewarped_image,
+            method = binarization_method
+        )
+    else:
+        fixed_image = dewarped_image
 
     if debug:
         render_processing_steps(
