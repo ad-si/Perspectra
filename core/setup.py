@@ -30,9 +30,10 @@ setup(
     keywords = 'document scanner perspective transformation',
     packages = ['perspectra'],
     install_requires = [
-      'matplotlib>=2.0.0',
-      'numpy>=1.12.0',
-      'scikit-image>=0.12.3',
+        'imageio>=2.1.0',
+        'matplotlib>=2.0.0',
+        'numpy>=1.12.0',
+        'scikit-image>=0.12.3',
     ],
     # entry_points = {
     #     console_scripts: [

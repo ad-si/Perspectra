@@ -2,6 +2,7 @@ import os
 import base64
 from pathlib import Path
 
+import imageio
 import numpy
 from numpy import linalg
 
@@ -39,6 +40,9 @@ def get_corners (shape):
 
 def get_sorted_corners (corners):
     # Sort-order: top-left, top-right, bottom-right, bottom-left
+
+    if not numpy.any(corners):
+        return None
 
     # Empty placeholder array
     sorted_corners = numpy.zeros((4, 2))
@@ -195,6 +199,15 @@ def transform_image (**kwargs):
             f'An input image and not {abs_input_image_path} must be specified'
         )
 
+    output_in_gray = kwargs.get('output_in_gray', False)
+    binarization_method = kwargs.get('binarization_method')
+    debug = kwargs.get('debug', False)
+    shall_plot_debug_view = kwargs.get('shall_plot_debug_view', False)
+    input_image_path = kwargs.get('input_image_path')
+    adaptive = kwargs.get('adaptive')
+    intermediate_height = 500
+    step_counter = 0
+
     basename = os.path.splitext(os.path.basename(abs_input_image_path))[0]
     random_string = (base64
         .b64encode(os.urandom(3))
@@ -207,77 +220,89 @@ def transform_image (**kwargs):
         os.path.dirname(abs_input_image_path),
         basename
     )
+    if debug:
+        os.makedirs(output_base_path, exist_ok=True)
+
     output_image_path = (
         kwargs.get('output_image_path') or \
         f'{output_base_path}-fixed_{random_string}.png'
     )
 
-    output_in_gray = kwargs.get('output_in_gray', False)
-    binarization_method = kwargs.get('binarization_method')
-    debug = kwargs.get('debug', False)
-    shall_plot_debug_view = kwargs.get('shall_plot_debug_view', False)
-    input_image_path = kwargs.get('input_image_path')
-    adaptive = kwargs.get('adaptive')
-    image = io.imread(abs_input_image_path)
 
-    intermediate_height = 500
-    scale_ratio = intermediate_height / image.shape[0]
-    resized_image = transform.resize(
-        image,
-        output_shape=(intermediate_height, int(image.shape[1] * scale_ratio))
-    )
-    image_corners = get_corners(resized_image.shape)
-
-    scaled_gray_image = rgb2gray(resized_image)
-    blurred = gaussian(scaled_gray_image, sigma=1)
-    elevation_map = sobel(blurred)
-
-    markers = numpy.zeros_like(scaled_gray_image)
-    center = (scaled_gray_image.shape[0] // 2, scaled_gray_image.shape[1] // 2)
-    markers[(0, 0)] = 1
-    markers[center] = 2
-
-    segmented_image = watershed(image=elevation_map, markers=markers)
-    harris_image = corner_harris(segmented_image, sigma=5)
-    # min_distance prevents image_corners from being included
-    detected_corners = corner_peaks(harris_image, min_distance=5)
-    # detected_corners = [(180, 220), (170, 1300), (740, 1400), (790, 210)]
-    sorted_corners = get_sorted_corners(detected_corners)
-    scaled_corners = numpy.divide(sorted_corners, scale_ratio)
-
-    dewarped_image = get_fixed_image(image, scaled_corners)
-
-    if binarization_method:
-        binarized_image = binarize(
-            image = dewarped_image,
-            method = binarization_method
-        )
-        fixed_image = binarized_image
-    else:
-        fixed_image = dewarped_image
-
-    def saveDebugImage (index, name, image):
+    def saveDebugImage (name, image):
+        if not debug:
+            return
+        nonlocal step_counter
+        step_counter = step_counter + 1
         io.imsave(
-            os.path.join(output_base_path, f'{index}-{name}.png'),
+            os.path.join(output_base_path, f'{step_counter}-{name}.png'),
             image
         )
 
-    if debug:
-        os.makedirs(output_base_path, exist_ok=True)
-        debug_images = [
-            ('resized_image', resized_image),
-            ('scaled_gray_image', scaled_gray_image),
-            ('blurred', blurred),
-            ('elevation_map', elevation_map),
-            ('segmented_image', label2rgb(segmented_image)),
-            ('harris_image', skimage.exposure.rescale_intensity(harris_image)),
-            ('dewarped_image', dewarped_image),
-            ('binarized_image', binarized_image),
-        ]
-        for index, (name, image) in enumerate(debug_images):
-            saveDebugImage(index + 1, name, image)
 
-    elif shall_plot_debug_view:
+    def get_transformed_image ():
+        image = imageio.imread(
+            abs_input_image_path,
+            exifrotate = True,
+        )
+
+        scale_ratio = intermediate_height / image.shape[0]
+        resized_image = transform.resize(
+            image,
+            output_shape=(intermediate_height, int(image.shape[1] * scale_ratio))
+        )
+        saveDebugImage('resized_image', resized_image)
+
+        image_corners = get_corners(resized_image.shape)
+
+        scaled_gray_image = rgb2gray(resized_image)
+        saveDebugImage('scaled_gray_image', scaled_gray_image)
+
+        blurred = gaussian(scaled_gray_image, sigma=1)
+        saveDebugImage('blurred', blurred)
+
+        elevation_map = sobel(blurred)
+        saveDebugImage('elevation_map', elevation_map)
+
+        markers = numpy.zeros_like(scaled_gray_image)
+        center = (scaled_gray_image.shape[0] // 2, scaled_gray_image.shape[1] // 2)
+        markers[(0, 0)] = 1
+        markers[center] = 2
+
+        segmented_image = watershed(image=elevation_map, markers=markers)
+        saveDebugImage('segmented_image', label2rgb(segmented_image))
+
+        harris_image = corner_harris(segmented_image, sigma=5)
+        saveDebugImage(
+            'harris_image',
+            skimage.exposure.rescale_intensity(harris_image)
+        )
+
+        # min_distance prevents image_corners from being included
+        detected_corners = corner_peaks(harris_image, min_distance=5)
+
+        # detected_corners = [(180, 220), (170, 1300), (740, 1400), (790, 210)]
+        sorted_corners = get_sorted_corners(detected_corners)
+
+        if not numpy.any(sorted_corners):
+            return image
+
+        scaled_corners = numpy.divide(sorted_corners, scale_ratio)
+        dewarped_image = get_fixed_image(image, scaled_corners)
+        saveDebugImage('dewarped_image', dewarped_image)
+
+        if binarization_method:
+            binarized_image = binarize(
+                image = dewarped_image,
+                method = binarization_method
+            )
+            saveDebugImage('binarized_image', binarized_image)
+            return binarized_image
+
+        return dewarped_image
+
+
+    if shall_plot_debug_view:
         render_processing_steps(
             resized_image = resized_image,
             scaled_gray_image = scaled_gray_image,
@@ -292,4 +317,4 @@ def transform_image (**kwargs):
         pyplot.show()
 
     else:
-        io.imsave(output_image_path, fixed_image)
+        io.imsave(output_image_path, get_transformed_image())
