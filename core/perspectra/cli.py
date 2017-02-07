@@ -25,6 +25,11 @@ def execute_arguments (arguments):
         dest='binarization_method',
     )
     parser.add_argument(
+        '--marked-image',
+        help='Copy of original image with marked corners',
+        dest='marked_image_path',
+    )
+    parser.add_argument(
         '--output',
         metavar='image-path',
         help='Output path of fixed image',
@@ -40,6 +45,9 @@ def execute_arguments (arguments):
 
     if args.input_image_path:
         args.input_image_path = path.abspath(args.input_image_path)
+
+    if args.marked_image_path:
+        args.marked_image_path = path.abspath(args.marked_image_path)
 
     if args.output_image_path:
         args.output_image_path = path.abspath(args.output_image_path)
