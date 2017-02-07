@@ -8,7 +8,7 @@ from numpy import linalg
 
 import skimage
 from skimage import (
-    filters, io, transform, morphology, feature, util
+    filters, io, transform, morphology, feature, util, segmentation
 )
 from skimage.color import rgb2gray, label2rgb
 from skimage.exposure import rescale_intensity
@@ -234,7 +234,7 @@ def transform_image (**kwargs):
     )
 
 
-    def saveDebugImage (name, image):
+    def save_debug_image (name, image):
         if not debug:
             return
         nonlocal step_counter
@@ -259,7 +259,7 @@ def transform_image (**kwargs):
                 int(image.shape[1] * scale_ratio)
             )
         )
-        saveDebugImage('resized_image', resized_image)
+        save_debug_image('resized_image', resized_image)
 
         if marked_image_path:
             marked_image = imageio.imread(marked_image_path, exifrotate = True) \
@@ -267,7 +267,7 @@ def transform_image (**kwargs):
                 else imageio.imread(marked_image_path)
 
             diff_corner_image = rgb2gray(marked_image - image)
-            saveDebugImage('diff_corner_image', diff_corner_image)
+            save_debug_image('diff_corner_image', diff_corner_image)
 
             min_sigma = 8 if extension.endswith(('jpg', 'jpeg')) else 1
             blobs = feature.blob_doh(
@@ -283,19 +283,19 @@ def transform_image (**kwargs):
             sorted_corners = get_sorted_corners(detected_corners)
 
             dewarped_image = get_fixed_image(image, sorted_corners)
-            saveDebugImage('dewarped_marked_image', dewarped_image)
+            save_debug_image('dewarped_marked_image', dewarped_image)
 
         else:
             image_corners = get_corners(resized_image.shape)
 
             scaled_gray_image = rgb2gray(resized_image)
-            saveDebugImage('scaled_gray_image', scaled_gray_image)
+            save_debug_image('scaled_gray_image', scaled_gray_image)
 
             blurred = gaussian(scaled_gray_image, sigma = 1)
-            saveDebugImage('blurred', blurred)
+            save_debug_image('blurred', blurred)
 
             elevation_map = sobel(blurred)
-            saveDebugImage('elevation_map', elevation_map)
+            save_debug_image('elevation_map', elevation_map)
 
             markers = numpy.zeros_like(scaled_gray_image)
             center = (
@@ -306,10 +306,10 @@ def transform_image (**kwargs):
             markers[center] = 2
 
             segmented_image = watershed(image=elevation_map, markers=markers)
-            saveDebugImage('segmented_image', label2rgb(segmented_image))
+            save_debug_image('segmented_image', label2rgb(segmented_image))
 
             harris_image = corner_harris(segmented_image, sigma = 5)
-            saveDebugImage(
+            save_debug_image(
                 'harris_image',
                 label2rgb(rescale_intensity(harris_image))
             )
@@ -324,15 +324,15 @@ def transform_image (**kwargs):
 
             scaled_corners = numpy.divide(sorted_corners, scale_ratio)
             dewarped_image = get_fixed_image(image, scaled_corners)
-            saveDebugImage('dewarped_image', dewarped_image)
+            save_debug_image('dewarped_image', dewarped_image)
 
         if binarization_method:
             binarized_image = binarize(
                 image = dewarped_image,
                 method = binarization_method
             )
-            saveDebugImage('binarized_image', binarized_image)
             return binarized_image
+            save_debug_image('binarized_image', binarized_image)
 
         return dewarped_image
 
