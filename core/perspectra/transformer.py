@@ -331,8 +331,13 @@ def transform_image (**kwargs):
                 image = dewarped_image,
                 method = binarization_method
             )
-            return binarized_image
             save_debug_image('binarized_image', binarized_image)
+            inverted_image = util.invert(binarized_image)
+            inverted_cleared_image = segmentation.clear_border(inverted_image)
+            cleared_image = util.invert(inverted_cleared_image)
+            save_debug_image('cleared_image', cleared_image)
+
+            return cleared_image
 
         return dewarped_image
 
