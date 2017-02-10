@@ -35,9 +35,9 @@ setup(
         'numpy>=1.12.0',
         'scikit-image>=0.12.3',
     ],
-    # entry_points = {
-    #     console_scripts: [
-    #         'sample=sample:main',
-    #     ],
-    # },
+    entry_points = {
+        'console_scripts': [
+            'perspectra = perspectra.__main__:main',
+        ],
+    },
 )
