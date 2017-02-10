@@ -1,14 +1,22 @@
 import os
 import base64
 from pathlib import Path
+import logging
 
 import imageio
 import numpy
-from numpy import linalg
-
 import skimage
 from skimage import (
-    filters, io, transform, morphology, feature, util, segmentation
+    color,
+    draw,
+    exposure,
+    feature,
+    filters,
+    io,
+    morphology,
+    segmentation,
+    transform,
+    util,
 )
 from skimage.color import rgb2gray, label2rgb
 from skimage.exposure import rescale_intensity
@@ -21,8 +29,30 @@ from skimage.filters import (
 from skimage.morphology import watershed, disk
 from skimage.util import img_as_ubyte
 
-from matplotlib import pyplot
-from matplotlib.widgets import Cursor
+
+class ImageDebugger:
+    def __init__ (self, level, base_path):
+        self.level = level
+        self.base_path = base_path
+        self.step_counter = 0
+
+    def set_level (self, level):
+        self.level = level
+        return self
+
+    def set_base_path (self, base_path):
+        self.base_path = base_path
+        return self
+
+    def save (self, name, image):
+        if self.level != 'debug':
+            return
+        self.step_counter += 1
+        imageio.imwrite(
+            os.path.join(self.base_path, f'{self.step_counter}-{name}.png'),
+            image
+        )
+        return self
 
 
 def load_image (file_name):
@@ -68,12 +98,12 @@ def get_sorted_corners (corners):
 def get_shape_of_fixed_image (corners):
     # TODO: Use correct algorithm as described in the readme
 
-    top_edge_length = linalg.norm(corners[0] - corners[1])
-    bottom_edge_length = linalg.norm(corners[2] - corners[3])
+    top_edge_length = numpy.linalg.norm(corners[0] - corners[1])
+    bottom_edge_length = numpy.linalg.norm(corners[2] - corners[3])
     width = int(max(top_edge_length, bottom_edge_length))
 
-    left_edge_length = linalg.norm(corners[0] - corners[3])
-    right_edge_length = linalg.norm(corners[1] - corners[2])
+    left_edge_length = numpy.linalg.norm(corners[0] - corners[3])
+    right_edge_length = numpy.linalg.norm(corners[1] - corners[2])
     height = int(max(left_edge_length, right_edge_length))
 
     return (height, width, 1)
@@ -97,17 +127,19 @@ def get_fixed_image (image, detected_corners):
     )
 
 
-def binarize (image, method = 'sauvola'):
+def binarize (image, debugger, method = 'sauvola'):
     radius = image.size // 2 ** 19
     radius += 1 if (radius % 2 == 0) else 0 # Must always be odd
 
     gray_image = rgb2gray(image)
+    debugger.save('gray_image', gray_image)
 
     if method == 'sauvola':
         thresh_sauvola = numpy.nan_to_num(threshold_sauvola(
             image = gray_image,
             window_size = radius,
         ))
+        debugger.save('thresh_sauvola', thresh_sauvola)
         binarized_image = gray_image > thresh_sauvola
 
     elif method == 'adaptive':
@@ -143,7 +175,9 @@ def binarize (image, method = 'sauvola'):
 
     # Io.imsave can not save boolean arrays,
     # therefore must be converted to ubyte
-    return skimage.img_as_ubyte(binarized_image)
+    debugger.save('binarized_image', binarized_image)
+
+    return binarized_image
 
 
 def transform_image (**kwargs):
@@ -157,11 +191,9 @@ def transform_image (**kwargs):
     output_in_gray = kwargs.get('output_in_gray', False)
     binarization_method = kwargs.get('binarization_method')
     debug = kwargs.get('debug', False)
-    shall_plot_debug_view = kwargs.get('shall_plot_debug_view', False)
     marked_image_path = kwargs.get('marked_image_path')
     adaptive = kwargs.get('adaptive')
     intermediate_height = 500
-    step_counter = 0
 
     file_name_segments = os.path.splitext(os.path.basename(input_image_path))
     basename = file_name_segments[0]
@@ -185,16 +217,10 @@ def transform_image (**kwargs):
         f'{output_base_path}-fixed_{random_string}.png'
     )
 
-
-    def save_debug_image (name, image):
-        if not debug:
-            return
-        nonlocal step_counter
-        step_counter = step_counter + 1
-        io.imsave(
-            os.path.join(output_base_path, f'{step_counter}-{name}.png'),
-            image
-        )
+    debugger = ImageDebugger(
+        level = 'debug' if debug else '',
+        base_path = output_base_path,
+    )
 
 
     def get_transformed_image ():
@@ -211,7 +237,7 @@ def transform_image (**kwargs):
                 int(image.shape[1] * scale_ratio)
             )
         )
-        save_debug_image('resized_image', resized_image)
+        debugger.save('resized_image', resized_image)
 
         if marked_image_path:
             marked_image = imageio.imread(marked_image_path, exifrotate = True) \
@@ -219,7 +245,7 @@ def transform_image (**kwargs):
                 else imageio.imread(marked_image_path)
 
             diff_corner_image = rgb2gray(marked_image - image)
-            save_debug_image('diff_corner_image', diff_corner_image)
+            debugger.save('diff_corner_image', diff_corner_image)
 
             min_sigma = 8 if extension.endswith(('jpg', 'jpeg')) else 1
             blobs = feature.blob_doh(
@@ -235,19 +261,19 @@ def transform_image (**kwargs):
             sorted_corners = get_sorted_corners(detected_corners)
 
             dewarped_image = get_fixed_image(image, sorted_corners)
-            save_debug_image('dewarped_marked_image', dewarped_image)
+            debugger.save('dewarped_marked_image', dewarped_image)
 
         else:
             image_corners = get_corners(resized_image.shape)
 
             scaled_gray_image = rgb2gray(resized_image)
-            save_debug_image('scaled_gray_image', scaled_gray_image)
+            debugger.save('scaled_gray_image', scaled_gray_image)
 
             blurred = gaussian(scaled_gray_image, sigma = 1)
-            save_debug_image('blurred', blurred)
+            debugger.save('blurred', blurred)
 
             elevation_map = sobel(blurred)
-            save_debug_image('elevation_map', elevation_map)
+            debugger.save('elevation_map', elevation_map)
 
             markers = numpy.zeros_like(scaled_gray_image)
             center = (
@@ -258,36 +284,38 @@ def transform_image (**kwargs):
             markers[center] = 2
 
             segmented_image = watershed(image=elevation_map, markers=markers)
-            save_debug_image('segmented_image', label2rgb(segmented_image))
+            debugger.save('segmented_image', label2rgb(segmented_image))
 
             harris_image = corner_harris(segmented_image, sigma = 5)
-            save_debug_image(
+            debugger.save(
                 'harris_image',
                 label2rgb(rescale_intensity(harris_image))
             )
 
             # `min_distance` prevents `image_corners` from being included
             detected_corners = corner_peaks(harris_image, min_distance = 5)
+            logging.info(detected_corners)
 
             sorted_corners = get_sorted_corners(detected_corners)
+            logging.info(sorted_corners)
 
             if not numpy.any(sorted_corners):
                 return image
 
             scaled_corners = numpy.divide(sorted_corners, scale_ratio)
             dewarped_image = get_fixed_image(image, scaled_corners)
-            save_debug_image('dewarped_image', dewarped_image)
+            debugger.save('dewarped_image', dewarped_image)
 
         if binarization_method:
             binarized_image = binarize(
                 image = dewarped_image,
-                method = binarization_method
+                method = binarization_method,
+                debugger = debugger,
             )
-            save_debug_image('binarized_image', binarized_image)
             inverted_image = util.invert(binarized_image)
             inverted_cleared_image = segmentation.clear_border(inverted_image)
             cleared_image = util.invert(inverted_cleared_image)
-            save_debug_image('cleared_image', cleared_image)
+            debugger.save('cleared_image', cleared_image)
 
             return cleared_image
 
