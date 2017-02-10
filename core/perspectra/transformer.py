@@ -97,53 +97,6 @@ def get_fixed_image (image, detected_corners):
     )
 
 
-def onclick (event):
-    print(
-        'button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
-        (event.button, event.x, event.y, event.xdata, event.ydata)
-    )
-
-
-def render_processing_steps (**kwargs):
-    sorted_corners = kwargs.get('sorted_corners')
-
-    fig, ((pos0, pos1), (pos2, pos3), (pos4, pos5),
-      (pos6, pos7), (pos8, pos9)) = pyplot.subplots(
-        nrows=5,
-        ncols=2,
-        figsize=(10, 14)
-    )
-
-    pos0.set_title('1. Resized image')
-    pos0.imshow(kwargs['resized_image'])
-
-    pos1.set_title('2. Luminance')
-    pos1.imshow(kwargs['scaled_gray_image'], cmap=pyplot.cm.gray)
-
-    pos2.set_title('3. Blurred with Gaussian filter')
-    pos2.imshow(kwargs['blurred'], cmap=pyplot.cm.gray)
-
-    pos3.set_title('4. Edge detection with Sobel filter')
-    pos3.imshow(kwargs['elevation_map'])
-
-    pos4.set_title('5. Segmentation with watershed algorithm')
-    pos4.imshow(kwargs['segmented_image'], cmap=pyplot.cm.gray)
-
-    pos5.set_title('6. Harris corner image with corner peaks')
-    pos5.imshow(kwargs['harris_image'])
-    pos5.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
-
-    pos6.set_title('7. Original image with detected corners')
-    pos6.imshow(kwargs['resized_image'])
-    pos6.plot(sorted_corners[:, 1], sorted_corners[:, 0], '+r', markersize=10)
-
-    pos7.set_title('8. Corrected perspective and corrected size')
-    pos7.imshow(kwargs['dewarped_image'], cmap=pyplot.cm.gray)
-
-    pos8.set_title('9. Binarize')
-    pos8.imshow(kwargs['binarized_image'], cmap=pyplot.cm.gray)
-
-
 def binarize (image, method = 'sauvola'):
     radius = image.size // 2 ** 19
     radius += 1 if (radius % 2 == 0) else 0 # Must always be odd
@@ -341,19 +294,7 @@ def transform_image (**kwargs):
         return dewarped_image
 
 
-    if shall_plot_debug_view:
-        render_processing_steps(
-            resized_image = resized_image,
-            scaled_gray_image = scaled_gray_image,
-            blurred = blurred,
-            elevation_map = elevation_map,
-            segmented_image = segmented_image,
-            harris_image = harris_image,
-            dewarped_image = dewarped_image,
-            sorted_corners = sorted_corners,
-            binarized_image = binarized_image
-        )
-        pyplot.show()
+    transformed_image = get_transformed_image()
 
-    else:
-        io.imsave(output_image_path, get_transformed_image())
+    if not debug:
+        imageio.imwrite(output_image_path, transformed_image)
