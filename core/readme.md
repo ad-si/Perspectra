@@ -5,6 +5,8 @@ Extract and perspectively correct documents in images.
 Check out [github:adius/awesome-scanning]
 for and extensive list of alternative solutions.
 
+[github:adius/awesome-scanning]: https://github.com/adius/awesome-scanning
+
 
 ## Usage
 
@@ -80,4 +82,13 @@ python3 setup.py bdist_mac
 ```
 
 
-[github:adius/awesome-scanning]: https://github.com/adius/awesome-scanning
+# TODO
+
+- Calculate aspect ratio of scanned document
+  and apply during perspective transformation
+- Make sure besin for watershed algorithm is in no local confinement
+- Add white border to sobel image or crop it by 1px in order
+  to correctly handle partly cropped documents
+- Check that there were at least 4 corners detected
+- Dewarp pages
+- Maximize contrast of image before binarizing
