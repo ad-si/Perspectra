@@ -70,12 +70,11 @@ def get_shape_of_fixed_image (corners):
 
     top_edge_length = linalg.norm(corners[0] - corners[1])
     bottom_edge_length = linalg.norm(corners[2] - corners[3])
-    # Reduce aliasing by scaling the output image (the * 2)
-    width = int(2 * max(top_edge_length, bottom_edge_length))
+    width = int(max(top_edge_length, bottom_edge_length))
 
     left_edge_length = linalg.norm(corners[0] - corners[3])
     right_edge_length = linalg.norm(corners[1] - corners[2])
-    height = int(2 * max(left_edge_length, right_edge_length))
+    height = int(max(left_edge_length, right_edge_length))
 
     return (height, width, 1)
 
