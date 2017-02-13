@@ -82,6 +82,19 @@ python3 setup.py bdist_mac
 ```
 
 
+# Constraints
+
+- Document
+    - Rectangular
+    - Pronounced corners
+    - Binary
+    - Light-colored paper
+
+- Photos with 10 - 20 Mpx
+    - On dark background
+    - Maximum of 30 deg angle to vertical axis
+
+
 # TODO
 
 - Calculate aspect ratio of scanned document
@@ -92,3 +105,4 @@ python3 setup.py bdist_mac
 - Check that there were at least 4 corners detected
 - Dewarp pages
 - Maximize contrast of image before binarizing
+- Make algorithms independent from photo sizes

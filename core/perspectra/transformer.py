@@ -205,7 +205,7 @@ def denoise (binary_image, debugger):
 def erode (binary_image, debugger):
     eroded_image = morphology.erosion(
         util.img_as_ubyte(binary_image),
-        morphology.square(25)
+        morphology.disk(25)
     )
     debugger.save('eroded image', eroded_image)
     return eroded_image
