@@ -29,6 +29,8 @@ from skimage.filters import (
 from skimage.morphology import watershed, disk
 from skimage.util import img_as_ubyte
 
+from .multipass_cleaner import remove_noise
+
 
 class ImageDebugger:
     def __init__ (self, level, base_path):
@@ -128,16 +130,21 @@ def get_fixed_image (image, detected_corners):
 
 
 def binarize (image, debugger, method = 'sauvola'):
-    radius = image.size // 2 ** 19
-    radius += 1 if (radius % 2 == 0) else 0 # Must always be odd
+    radius = 3
 
     gray_image = rgb2gray(image)
     debugger.save('gray_image', gray_image)
 
     if method == 'sauvola':
+        window_size = 3 # Minimal window size
+        window_size += image.size // 2 ** 20 # Set relative to image size
+        window_size += 1 if (window_size % 2 == 0) else 0 # Must always be odd
+        logging.info(f'window_size: {window_size}')
+
         thresh_sauvola = numpy.nan_to_num(threshold_sauvola(
             image = gray_image,
-            window_size = radius,
+            window_size = window_size,
+            k = 0.4, # Attained through experimentation
         ))
         debugger.save('thresh_sauvola', thresh_sauvola)
         binarized_image = gray_image > thresh_sauvola
@@ -173,11 +180,35 @@ def binarize (image, debugger, method = 'sauvola'):
     else:
         raise TypeError(f'{method} is no supported binarization method')
 
-    # Io.imsave can not save boolean arrays,
-    # therefore must be converted to ubyte
     debugger.save('binarized_image', binarized_image)
 
     return binarized_image
+
+
+def clear (binary_image, debugger):
+    inverted_image = util.invert(binary_image)
+    inverted_cleared_image = segmentation.clear_border(inverted_image)
+    cleared_image = util.invert(inverted_cleared_image)
+    debugger.save('cleared_image', cleared_image)
+    return cleared_image
+
+
+def denoise (binary_image, debugger):
+    inverted_image = util.invert(binary_image)
+    inverted_denoised_image = remove_noise(inverted_image)
+    denoised_image = util.invert(inverted_denoised_image)
+    debugger.save('denoised_image', denoised_image)
+
+    return denoised_image
+
+
+def erode (binary_image, debugger):
+    eroded_image = morphology.erosion(
+        util.img_as_ubyte(binary_image),
+        morphology.square(25)
+    )
+    debugger.save('eroded image', eroded_image)
+    return eroded_image
 
 
 def transform_image (**kwargs):
@@ -308,16 +339,15 @@ def transform_image (**kwargs):
 
         if binarization_method:
             binarized_image = binarize(
-                image = dewarped_image,
-                method = binarization_method,
-                debugger = debugger,
+                image=dewarped_image,
+                method=binarization_method,
+                debugger=debugger,
             )
-            inverted_image = util.invert(binarized_image)
-            inverted_cleared_image = segmentation.clear_border(inverted_image)
-            cleared_image = util.invert(inverted_cleared_image)
-            debugger.save('cleared_image', cleared_image)
-
-            return cleared_image
+            cleared_image = clear(binarized_image, debugger)
+            denoised_image = denoise(cleared_image, debugger)
+            erode(cleared_image, debugger)
+            erode(denoised_image, debugger)
+            return denoised_image
 
         return dewarped_image
 

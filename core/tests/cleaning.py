@@ -11,7 +11,7 @@ noisy_orig = add_noise(original)
 images.append(('Noisy Original', noisy_orig))
 
 # Should actually go up to ~8, but performance becomes unbearable
-cleaned_img = remove_noise(noisy_orig, 7, images)
+cleaned_img = remove_noise(noisy_orig, images=images)
 images.append(('Final cleaned image', cleaned_img))
 images.append(('Original', original))
 
