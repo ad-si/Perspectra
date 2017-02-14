@@ -202,12 +202,12 @@ def denoise (binary_image, debugger):
     return denoised_image
 
 
-def erode (binary_image, debugger):
+def erode (image, image_name, debugger):
     eroded_image = morphology.erosion(
-        util.img_as_ubyte(binary_image),
+        util.img_as_ubyte(image),
         morphology.disk(25)
     )
-    debugger.save('eroded image', eroded_image)
+    debugger.save(f'eroded_{image_name}', eroded_image)
     return eroded_image
 
 
@@ -221,6 +221,7 @@ def transform_image (**kwargs):
 
     output_in_gray = kwargs.get('output_in_gray', False)
     binarization_method = kwargs.get('binarization_method')
+    shall_clear_border = not kwargs.get('shall_not_clear_border', False)
     debug = kwargs.get('debug', False)
     marked_image_path = kwargs.get('marked_image_path')
     adaptive = kwargs.get('adaptive')
@@ -343,10 +344,16 @@ def transform_image (**kwargs):
                 method=binarization_method,
                 debugger=debugger,
             )
-            cleared_image = clear(binarized_image, debugger)
-            denoised_image = denoise(cleared_image, debugger)
-            erode(cleared_image, debugger)
-            erode(denoised_image, debugger)
+            if shall_clear_border:
+                cleared_image = clear(binarized_image, debugger)
+                erode(cleared_image, 'cleared_image', debugger)
+                denoised_image = denoise(cleared_image, debugger)
+            else:
+                erode(binarized_image, 'binarized_image', debugger)
+                denoised_image = denoise(binarized_image, debugger)
+
+            erode(denoised_image, 'denoised_image', debugger)
+
             return denoised_image
 
         return dewarped_image

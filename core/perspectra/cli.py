@@ -41,6 +41,12 @@ def execute_arguments (arguments):
         dest = 'binarization_method',
     )
     parser_correct.add_argument(
+        '--no-clear-border',
+        help = 'Do not remove any objects which touch the border',
+        action = 'store_true',
+        dest = 'shall_not_clear_border',
+    )
+    parser_correct.add_argument(
         '--marked-image',
         help = 'Copy of original image with marked corners',
         dest = 'marked_image_path',
