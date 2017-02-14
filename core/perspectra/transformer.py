@@ -144,7 +144,7 @@ def binarize (image, debugger, method = 'sauvola'):
         thresh_sauvola = numpy.nan_to_num(threshold_sauvola(
             image = gray_image,
             window_size = window_size,
-            k = 0.4, # Attained through experimentation
+            k = 0.3, # Attained through experimentation
         ))
         debugger.save('thresh_sauvola', thresh_sauvola)
         binarized_image = gray_image > thresh_sauvola
