@@ -106,3 +106,5 @@ python3 setup.py bdist_mac
 - Dewarp pages
 - Maximize contrast of image before binarizing
 - Make algorithms independent from photo sizes
+- Limit the kind of objects which get deleted when touching the border
+  (e.g. only elongated objects)
