@@ -26,7 +26,7 @@ optional arguments:
 ```
 
 
-### With Docker (currently not wokring)
+### With Docker (currently not working)
 
 Run with CPython
 
