@@ -338,6 +338,16 @@ def transform_image (**kwargs):
             dewarped_image = get_fixed_image(image, scaled_corners)
             debugger.save('dewarped_image', dewarped_image)
 
+
+        # TODO: if is_book:
+
+
+        if output_in_gray:
+            grayscale_image = rgb2gray(dewarped_image)
+            rescaled_image = exposure.rescale_intensity(grayscale_image)
+            return rescaled_image
+
+
         if binarization_method:
             binarized_image = binarize(
                 image=dewarped_image,
