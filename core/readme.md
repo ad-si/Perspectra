@@ -108,3 +108,6 @@ python3 setup.py bdist_mac
 - Make algorithms independent from photo sizes
 - Limit the kind of objects which get deleted when touching the border
   (e.g. only elongated objects)
+- Better algorithm for documents with rounded corners (e.g. credit cards)
+- Mention that file format is infered from file extension
+- Spread range after converting to grayscale
