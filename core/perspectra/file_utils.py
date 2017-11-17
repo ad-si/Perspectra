@@ -22,13 +22,13 @@ For example a book with 9 content pages and a cover starting at image 23:
 from pathlib import Path
 
 
-def getTempPath (file_path):
+def getTempPath(file_path):
     return file_path.with_name(
         f'temporary-name-to-avoid-collisions_{file_path.name}'
     )
 
 
-def renumber_pages (book_directory = '.'):
+def renumber_pages(book_directory='.'):
     # Configuration
     shall_run_dry = True
     includes_cover = True
@@ -53,11 +53,12 @@ def renumber_pages (book_directory = '.'):
         even_pages = images[split_point:][::-1]
 
         sorted_images = [images[0]] + [img
-            for tup in zip(odd_pages, even_pages)
-            for img in tup
-        ]
+                                       for tup in zip(odd_pages, even_pages)
+                                       for img in tup
+                                       ]
     else:
-        raise TypeError('TODO: Implement renaming if pages don\'t include a cover')
+        raise TypeError(
+            'TODO: Implement renaming if pages don\'t include a cover')
 
     print(f'In "{book_dir_path}" move:\n')
 

@@ -1,6 +1,7 @@
 import io
 from setuptools import setup
 
+
 def read(*filenames, **kwargs):
     encoding = kwargs.get('encoding', 'utf-8')
     sep = kwargs.get('sep', '\n')
@@ -9,6 +10,7 @@ def read(*filenames, **kwargs):
         with io.open(filename, encoding=encoding) as f:
             buf.append(f.read())
     return sep.join(buf)
+
 
 setup(
     name='perspectra',
@@ -22,7 +24,7 @@ setup(
     packages=['perspectra'],
     include_package_data=True,
     platforms='any',
-    classifiers = [
+    classifiers=[
         'Programming Language :: Python',
         'Development Status :: Beta',
         'Natural Language :: English',
@@ -31,7 +33,7 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Image Manipulation',
     ],
-    scripts = ['cli.py'],
+    scripts=['cli.py'],
     setup_requires=['py2app'],
     options={'py2app': {
         'argv_emulation': True,

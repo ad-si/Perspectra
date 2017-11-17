@@ -1,7 +1,8 @@
 import numpy
 from skimage import morphology
 
-def remove_noise (original_img, passes = 7, images = False):
+
+def remove_noise(original_img, passes=7, images=False):
     """
     Larger blobs must be increasingly separated to be labeled as noise
     """
@@ -31,7 +32,8 @@ def remove_noise (original_img, passes = 7, images = False):
         )
         if images:
             images.append((f'eroded {index}', eroded))
-        cleaned_eroded = morphology.remove_small_objects(eroded, max_noise_size)
+        cleaned_eroded = morphology.remove_small_objects(
+            eroded, max_noise_size)
         if images:
             images.append((f'cleaned eroded {index}', cleaned_eroded))
         cleaned_orig = numpy.logical_and(cleaned_orig, cleaned_eroded)
