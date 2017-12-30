@@ -256,28 +256,27 @@ def transform_image (**kwargs):
 
 
     def get_transformed_image ():
-        image = imageio.imread(input_image_path, exifrotate = True) \
-            if input_image_path.endswith(('jpg', 'jpeg')) \
-            else imageio.imread(input_image_path)
-
-        scale_ratio = intermediate_height / image.shape[0]
-
-        resized_image = transform.resize(
-            image,
-            output_shape=(
-                intermediate_height,
-                int(image.shape[1] * scale_ratio)
-            )
-        )
-        debugger.save('resized_image', resized_image)
+        if input_image_path.endswith(('jpg', 'jpeg')):
+            image = imageio.imread(input_image_path, exifrotate=True)
+        else:
+            # Can't replicate when gamma gets corrected => always ignore it
+            image = imageio.imread(input_image_path, ignoregamma=True)
 
         if marked_image_path:
-            marked_image = imageio.imread(marked_image_path, exifrotate = True) \
-                if marked_image_path.endswith(('jpg', 'jpeg')) \
-                else imageio.imread(marked_image_path)
+            if marked_image_path.endswith(('jpg', 'jpeg')):
+                marked_image = imageio.imread(
+                    marked_image_path,
+                    exifrotate=True
+                )
+            else:
+                # Can't replicate when gamma gets corrected => always ignore it
+                marked_image = imageio.imread(
+                    marked_image_path,
+                    ignoregamma=True
+                )
 
-            diff_corner_image = rgb2gray(marked_image - image)
-            debugger.save('diff_corner_image', diff_corner_image)
+            diff_corner_image = rgb2gray(image - marked_image)
+            debugger.save('diff_corner', diff_corner_image)
 
             min_sigma = 8 if extension.endswith(('jpg', 'jpeg')) else 1
             blobs = feature.blob_doh(
@@ -285,21 +284,29 @@ def transform_image (**kwargs):
                 min_sigma = min_sigma,
             )
 
-            # Delete sigma values
             detected_corners = numpy.delete(blobs, 2, 1)
+            corners_normalized = get_sorted_corners(detected_corners)
 
-            print(detected_corners)
-
-            sorted_corners = get_sorted_corners(detected_corners)
-
-            dewarped_image = get_fixed_image(image, sorted_corners)
-            debugger.save('dewarped_marked_image', dewarped_image)
+            if not numpy.any(corners_normalized):
+                print('No corners detected')
+                return image
 
         else:
+            scale_ratio = intermediate_height / image.shape[0]
+
+            resized_image = transform.resize(
+                image,
+                output_shape=(
+                    intermediate_height,
+                    int(image.shape[1] * scale_ratio)
+                )
+            )
+            debugger.save('resized', resized_image)
+
             image_corners = get_corners(resized_image.shape)
 
             scaled_gray_image = rgb2gray(resized_image)
-            debugger.save('scaled_gray_image', scaled_gray_image)
+            debugger.save('scaled_gray', scaled_gray_image)
 
             blurred = gaussian(scaled_gray_image, sigma = 1)
             debugger.save('blurred', blurred)
@@ -316,11 +323,11 @@ def transform_image (**kwargs):
             markers[center] = 2
 
             segmented_image = watershed(image=elevation_map, markers=markers)
-            debugger.save('segmented_image', label2rgb(segmented_image))
+            debugger.save('segmented', label2rgb(segmented_image))
 
             harris_image = corner_harris(segmented_image, sigma = 5)
             debugger.save(
-                'harris_image',
+                'harris_corner',
                 label2rgb(rescale_intensity(harris_image))
             )
 
@@ -334,18 +341,20 @@ def transform_image (**kwargs):
             if not numpy.any(sorted_corners):
                 return image
 
-            scaled_corners = numpy.divide(sorted_corners, scale_ratio)
-            dewarped_image = get_fixed_image(image, scaled_corners)
-            debugger.save('dewarped_image', dewarped_image)
+            corners_normalized = numpy.divide(sorted_corners, scale_ratio)
+
+
+        dewarped_image = get_fixed_image(image, corners_normalized)
+        debugger.save('dewarped', dewarped_image)
 
 
         # TODO: if is_book:
 
-
         if output_in_gray:
             grayscale_image = rgb2gray(dewarped_image)
-            rescaled_image = exposure.rescale_intensity(grayscale_image)
-            return rescaled_image
+            image_norm_intensity = exposure.rescale_intensity(grayscale_image)
+            debugger.save('normalized_intensity', image_norm_intensity)
+            return image_norm_intensity
 
 
         if binarization_method:
@@ -356,13 +365,13 @@ def transform_image (**kwargs):
             )
             if shall_clear_border:
                 cleared_image = clear(binarized_image, debugger)
-                erode(cleared_image, 'cleared_image', debugger)
+                erode(cleared_image, 'cleared', debugger)
                 denoised_image = denoise(cleared_image, debugger)
             else:
-                erode(binarized_image, 'binarized_image', debugger)
+                erode(binarized_image, 'binarized', debugger)
                 denoised_image = denoise(binarized_image, debugger)
 
-            erode(denoised_image, 'denoised_image', debugger)
+            erode(denoised_image, 'denoised', debugger)
 
             return denoised_image
 
