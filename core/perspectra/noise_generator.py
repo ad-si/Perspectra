@@ -2,7 +2,8 @@ import random
 import numpy
 from skimage import morphology, util
 
-def add_noise (image):
+
+def add_noise(image):
     base_radius = 2
     base_disk = morphology.disk(base_radius)
     total_amount = 0.001

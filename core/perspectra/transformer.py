@@ -33,20 +33,20 @@ from .multipass_cleaner import remove_noise
 
 
 class ImageDebugger:
-    def __init__ (self, level, base_path):
+    def __init__(self, level, base_path):
         self.level = level
         self.base_path = base_path
         self.step_counter = 0
 
-    def set_level (self, level):
+    def set_level(self, level):
         self.level = level
         return self
 
-    def set_base_path (self, base_path):
+    def set_base_path(self, base_path):
         self.base_path = base_path
         return self
 
-    def save (self, name, image):
+    def save(self, name, image):
         if self.level != 'debug':
             return
         self.step_counter += 1
@@ -57,12 +57,12 @@ class ImageDebugger:
         return self
 
 
-def load_image (file_name):
+def load_image(file_name):
     file_path = os.path.join(os.getcwd(), file_name)
     return io.imread(file_path)
 
 
-def get_corners (shape):
+def get_corners(shape):
     rows = shape[0]
     colums = shape[1]
     return [
@@ -73,7 +73,7 @@ def get_corners (shape):
     ]
 
 
-def get_sorted_corners (corners):
+def get_sorted_corners(corners):
     # Sort-order: top-left, top-right, bottom-right, bottom-left
 
     if not numpy.any(corners):
@@ -82,7 +82,7 @@ def get_sorted_corners (corners):
     # Empty placeholder array
     sorted_corners = numpy.zeros((4, 2))
 
-    sum_row_column = corners.sum(axis = 1)
+    sum_row_column = corners.sum(axis=1)
     # Top-left => smallest sum
     sorted_corners[0] = corners[numpy.argmin(sum_row_column)]
     # Bottom-right => largest sum
@@ -97,7 +97,7 @@ def get_sorted_corners (corners):
     return sorted_corners
 
 
-def get_shape_of_fixed_image (corners):
+def get_shape_of_fixed_image(corners):
     # TODO: Use correct algorithm as described in the readme
 
     top_edge_length = numpy.linalg.norm(corners[0] - corners[1])
@@ -111,7 +111,7 @@ def get_shape_of_fixed_image (corners):
     return (height, width, 1)
 
 
-def get_fixed_image (image, detected_corners):
+def get_fixed_image(image, detected_corners):
     image_corners = get_corners(image.shape)
     shape_of_fixed_image = get_shape_of_fixed_image(detected_corners)
     corners_of_fixed_image = get_corners(shape_of_fixed_image)
@@ -125,26 +125,27 @@ def get_fixed_image (image, detected_corners):
     return transform.warp(
         image,
         projectiveTransform,
-        output_shape=shape_of_fixed_image
+        output_shape=shape_of_fixed_image,
+        mode='reflect',
     )
 
 
-def binarize (image, debugger, method = 'sauvola'):
+def binarize(image, debugger, method='sauvola'):
     radius = 3
 
     gray_image = rgb2gray(image)
     debugger.save('gray_image', gray_image)
 
     if method == 'sauvola':
-        window_size = 3 # Minimal window size
-        window_size += image.size // 2 ** 20 # Set relative to image size
-        window_size += 1 if (window_size % 2 == 0) else 0 # Must always be odd
+        window_size = 3  # Minimal window size
+        window_size += image.size // 2 ** 20  # Set relative to image size
+        window_size += 1 if (window_size % 2 == 0) else 0  # Must always be odd
         logging.info(f'window_size: {window_size}')
 
         thresh_sauvola = numpy.nan_to_num(threshold_sauvola(
-            image = gray_image,
-            window_size = window_size,
-            k = 0.3, # Attained through experimentation
+            image=gray_image,
+            window_size=window_size,
+            k=0.3,  # Attained through experimentation
         ))
         debugger.save('thresh_sauvola', thresh_sauvola)
         binarized_image = gray_image > thresh_sauvola
@@ -157,18 +158,19 @@ def binarize (image, debugger, method = 'sauvola'):
 
         thresh_niblack = skimage.filters.threshold_niblack(
             image,
-            window_size = radius,
-            k = 0.08,
+            window_size=radius,
+            k=0.08,
         )
-        binarized_image =  image > thresh_niblack
+        binarized_image = image > thresh_niblack
 
-    elif method == 'sieber':
-        high_frequencies = image - gaussian(image, sigma=sigma)
-        thresh_sieber = threshold_otsu(high_frequencies)
-        binarized_image = high_frequencies > thresh_adi
-        # binary_sieber = image - (skimage.filters.rank
-        #     .median(image, disk(radius))
-        #     .median(image, disk(radius))))
+    elif method == 'gauss-diff':
+        sigma = gray_image.size // (2 ** 17)
+        high_frequencies = gray_image - gaussian(
+            image=gray_image,
+            sigma=sigma,
+        )
+        thresh = threshold_otsu(high_frequencies)
+        binarized_image = high_frequencies > thresh
 
     elif method == 'local-otsu':
         warped_image_ubyte = img_as_ubyte(image)
@@ -185,7 +187,7 @@ def binarize (image, debugger, method = 'sauvola'):
     return binarized_image
 
 
-def clear (binary_image, debugger):
+def clear(binary_image, debugger):
     inverted_image = util.invert(binary_image)
     inverted_cleared_image = segmentation.clear_border(inverted_image)
     cleared_image = util.invert(inverted_cleared_image)
@@ -193,7 +195,7 @@ def clear (binary_image, debugger):
     return cleared_image
 
 
-def denoise (binary_image, debugger):
+def denoise(binary_image, debugger):
     inverted_image = util.invert(binary_image)
     inverted_denoised_image = remove_noise(inverted_image)
     denoised_image = util.invert(inverted_denoised_image)
@@ -202,7 +204,7 @@ def denoise (binary_image, debugger):
     return denoised_image
 
 
-def erode (image, image_name, debugger):
+def erode(image, image_name, debugger):
     eroded_image = morphology.erosion(
         util.img_as_ubyte(image),
         morphology.disk(25)
@@ -211,7 +213,7 @@ def erode (image, image_name, debugger):
     return eroded_image
 
 
-def transform_image (**kwargs):
+def transform_image(**kwargs):
     input_image_path = kwargs.get('input_image_path')
 
     if not input_image_path:
@@ -223,7 +225,7 @@ def transform_image (**kwargs):
     binarization_method = kwargs.get('binarization_method')
     shall_clear_border = not kwargs.get('shall_not_clear_border', False)
     debug = kwargs.get('debug', False)
-    marked_image_path = kwargs.get('marked_image_path')
+    image_marked_path = kwargs.get('image_marked_path')
     adaptive = kwargs.get('adaptive')
     intermediate_height = 500
 
@@ -231,11 +233,11 @@ def transform_image (**kwargs):
     basename = file_name_segments[0]
     extension = file_name_segments[1]
     random_string = (base64
-        .b64encode(os.urandom(3))
-        .decode('utf-8')
-        .replace('+', '-')
-        .replace('/', '_')
-    )
+                     .b64encode(os.urandom(3))
+                     .decode('utf-8')
+                     .replace('+', '-')
+                     .replace('/', '_')
+                     )
 
     output_base_path = os.path.join(
         os.path.dirname(input_image_path),
@@ -245,21 +247,21 @@ def transform_image (**kwargs):
         os.makedirs(output_base_path, exist_ok=True)
 
     output_image_path = (
-        kwargs.get('output_image_path') or \
+        kwargs.get('output_image_path') or
         f'{output_base_path}-fixed_{random_string}.png'
     )
 
     debugger = ImageDebugger(
-        level = 'debug' if debug else '',
-        base_path = output_base_path,
+        level='debug' if debug else '',
+        base_path=output_base_path,
     )
 
-
-    def get_transformed_image ():
-        if input_image_path.endswith(('jpg', 'jpeg')):
+    def get_transformed_image():
+        if input_image_path.lower().endswith(('jpg', 'jpeg')):
             image = imageio.imread(input_image_path, exifrotate=True)
         else:
-            # Can't replicate when gamma gets corrected => always ignore it
+            # It's unclear under which circumstances gamma gets corrected
+            # => always ignore it
             image = imageio.imread(input_image_path, ignoregamma=True)
 
         if image_marked_path:
@@ -313,11 +315,8 @@ def transform_image (**kwargs):
             scaled_gray_image = rgb2gray(resized_image)
             debugger.save('scaled_gray', scaled_gray_image)
 
-            blurred = gaussian(scaled_gray_image, sigma = 1)
+            blurred = gaussian(scaled_gray_image, sigma=1)
             debugger.save('blurred', blurred)
-
-            elevation_map = sobel(blurred)
-            debugger.save('elevation_map', elevation_map)
 
             markers = numpy.zeros_like(scaled_gray_image)
             center = (
@@ -338,14 +337,14 @@ def transform_image (**kwargs):
             segmented_image = watershed(image=elevation_map, markers=markers)
             debugger.save('segmented', label2rgb(segmented_image))
 
-            harris_image = corner_harris(segmented_image, sigma = 5)
+            harris_image = corner_harris(segmented_image, sigma=5)
             debugger.save(
                 'harris_corner',
                 label2rgb(rescale_intensity(harris_image))
             )
 
             # `min_distance` prevents `image_corners` from being included
-            detected_corners = corner_peaks(harris_image, min_distance = 5)
+            detected_corners = corner_peaks(harris_image, min_distance=5)
             logging.info(detected_corners)
 
             sorted_corners = get_sorted_corners(detected_corners)
@@ -356,10 +355,8 @@ def transform_image (**kwargs):
 
             corners_normalized = numpy.divide(sorted_corners, scale_ratio)
 
-
         dewarped_image = get_fixed_image(image, corners_normalized)
         debugger.save('dewarped', dewarped_image)
-
 
         # TODO: if is_book:
 
@@ -368,7 +365,6 @@ def transform_image (**kwargs):
             image_norm_intensity = exposure.rescale_intensity(grayscale_image)
             debugger.save('normalized_intensity', image_norm_intensity)
             return image_norm_intensity
-
 
         if binarization_method:
             binarized_image = binarize(
@@ -389,7 +385,6 @@ def transform_image (**kwargs):
             return denoised_image
 
         return dewarped_image
-
 
     transformed_image = get_transformed_image()
 
