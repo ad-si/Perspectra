@@ -327,6 +327,14 @@ def transform_image (**kwargs):
             markers[(0, 0)] = 1
             markers[center] = 2
 
+            elevation_map = sobel(blurred)
+
+            # Flatten elevation map at seed
+            # to avoid being trapped in a local minimum
+            rows, columns = circle(center[0], center[1], 10)
+            elevation_map[rows, columns] = 0.0
+            debugger.save('elevation_map', elevation_map)
+
             segmented_image = watershed(image=elevation_map, markers=markers)
             debugger.save('segmented', label2rgb(segmented_image))
 
