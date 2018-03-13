@@ -243,17 +243,30 @@ def transform_image(**kwargs):
         os.path.dirname(input_image_path),
         basename
     )
+
+    # Settings for debugging
     if debug:
         os.makedirs(output_base_path, exist_ok=True)
-
-    output_image_path = (
-        kwargs.get('output_image_path') or
-        f'{output_base_path}-fixed_{random_string}.png'
-    )
+        logging.basicConfig(
+            filename=os.path.join(output_base_path, '0-log.txt'),
+            level=logging.DEBUG,
+            format=' - '.join([
+                '%(asctime)s',
+                '%(pathname)s:%(lineno)s',
+                '%(levelname)s',
+                '%(name)s',
+                '%(message)s',
+            ]),
+        )
 
     debugger = ImageDebugger(
         level='debug' if debug else '',
         base_path=output_base_path,
+    )
+
+    output_image_path = (
+        kwargs.get('output_image_path') or
+        f'{output_base_path}-fixed_{random_string}.png'
     )
 
     def get_transformed_image():
@@ -295,7 +308,7 @@ def transform_image(**kwargs):
             corners_normalized = get_sorted_corners(detected_corners)
 
             if not numpy.any(corners_normalized):
-                print('No corners detected')
+                logging.warn('No corners detected')
                 return image
 
         else:
@@ -306,7 +319,8 @@ def transform_image(**kwargs):
                 output_shape=(
                     intermediate_height,
                     int(image.shape[1] * scale_ratio)
-                )
+                ),
+                mode='reflect',
             )
             debugger.save('resized', resized_image)
 
@@ -338,17 +352,15 @@ def transform_image(**kwargs):
             debugger.save('segmented', label2rgb(segmented_image))
 
             harris_image = corner_harris(segmented_image, sigma=5)
-            debugger.save(
-                'harris_corner',
-                label2rgb(rescale_intensity(harris_image))
-            )
 
             # `min_distance` prevents `image_corners` from being included
             detected_corners = corner_peaks(harris_image, min_distance=5)
-            logging.info(detected_corners)
+            draw.set_color(harris_image, numpy.transpose(detected_corners), 0)
+            debugger.save('harris_corner', harris_image)
+            logging.info(f'Detected corners: {detected_corners}')
 
             sorted_corners = get_sorted_corners(detected_corners)
-            logging.info(sorted_corners)
+            logging.info(f'Sorted corners: {sorted_corners}')
 
             if not numpy.any(sorted_corners):
                 return image
