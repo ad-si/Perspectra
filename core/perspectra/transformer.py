@@ -262,26 +262,31 @@ def transform_image (**kwargs):
             # Can't replicate when gamma gets corrected => always ignore it
             image = imageio.imread(input_image_path, ignoregamma=True)
 
-        if marked_image_path:
-            if marked_image_path.endswith(('jpg', 'jpeg')):
-                marked_image = imageio.imread(
-                    marked_image_path,
+        if image_marked_path:
+            if image_marked_path.endswith(('jpg', 'jpeg')):
+                image_marked = imageio.imread(
+                    image_marked_path,
                     exifrotate=True
                 )
             else:
                 # Can't replicate when gamma gets corrected => always ignore it
-                marked_image = imageio.imread(
-                    marked_image_path,
+                image_marked = imageio.imread(
+                    image_marked_path,
                     ignoregamma=True
                 )
 
-            diff_corner_image = rgb2gray(image - marked_image)
+            # TODO: Scale image before doing any computations
+
+            image_gray = rgb2gray(image)
+            image_marked_gray = rgb2gray(image_marked)
+
+            # Use value > 0 in range 0 <= x <= 1 to ignore JPEG artifacts
+            diff_corner_image = abs(image_gray - image_marked_gray) > 0.05
             debugger.save('diff_corner', diff_corner_image)
 
-            min_sigma = 8 if extension.endswith(('jpg', 'jpeg')) else 1
             blobs = feature.blob_doh(
-                image = diff_corner_image,
-                min_sigma = min_sigma,
+                image=diff_corner_image,
+                min_sigma=5,
             )
 
             detected_corners = numpy.delete(blobs, 2, 1)

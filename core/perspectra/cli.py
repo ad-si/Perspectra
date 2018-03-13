@@ -48,8 +48,8 @@ def execute_arguments (arguments):
     )
     parser_correct.add_argument(
         '--marked-image',
-        help = 'Copy of original image with marked corners',
-        dest = 'marked_image_path',
+        help='Copy of original image with marked corners',
+        dest='image_marked_path',
     )
     parser_correct.add_argument(
         '--output',
@@ -89,10 +89,10 @@ def execute_arguments (arguments):
     if args.input_image_path:
         args.input_image_path = path.abspath(args.input_image_path)
 
-    if args.marked_image_path:
-        args.marked_image_path = path.abspath(args.marked_image_path)
+        if args.image_marked_path:
+            args.image_marked_path = path.abspath(args.image_marked_path)
 
-    if args.output_image_path:
-        args.output_image_path = path.abspath(args.output_image_path)
+        if args.output_image_path:
+            args.output_image_path = path.abspath(args.output_image_path)
 
     args.func(**vars(args))
