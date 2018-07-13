@@ -13,6 +13,7 @@ from skimage import (
     feature,
     filters,
     io,
+    measure,
     morphology,
     segmentation,
     transform,
@@ -50,16 +51,73 @@ class ImageDebugger:
         if self.level != 'debug':
             return
         self.step_counter += 1
-        imageio.imwrite(
-            os.path.join(self.base_path, f'{self.step_counter}-{name}.png'),
-            image
+        image_path = os.path.join(
+            self.base_path,
+            f'{self.step_counter}-{name}.png',
         )
+        imageio.imwrite(image_path, image)
+        logging.info(f'Stored image: {image_path}')
         return self
 
 
 def load_image(file_name):
     file_path = os.path.join(os.getcwd(), file_name)
     return io.imread(file_path)
+
+
+def vertices_to_edges(vertices):
+    edges = []
+    for index, coordinate in enumerate(vertices):
+        if index != (len(vertices) - 1):
+            edges.append([coordinate, vertices[index + 1]])
+    return edges
+
+
+def simplify_polygon(vertices, targetCount=4):
+    """
+    Merge globally shortest edge with shortest neighbor
+    """
+    if not numpy.array_equal(vertices[0], vertices[-1]):
+        raise ValueError(f'First vertex ({vertices[0]}) \
+            and last ({vertices[-1]}) must be the same')
+
+    edges = numpy.array(vertices_to_edges(vertices))
+
+    while len(edges) > targetCount:
+        edges_lengths = [
+            numpy.linalg.norm(edge[0] - edge[1])
+            for edge in edges
+        ]
+        edge_min_index = numpy.argmin(edges_lengths)
+        edge_prev_length = edges_lengths[edge_min_index - 1]
+        edge_next_length = numpy.take(
+            edges_lengths,
+            edge_min_index + 1,
+            mode='wrap',
+        )
+
+        if edge_prev_length < edge_next_length:
+            # Merge with previous edge
+            edges[edge_min_index][0] = edges[edge_min_index - 1][0]
+            edges = numpy.delete(edges, edge_min_index - 1, axis=0)
+            edges_lengths = numpy.delete(edges_lengths, edge_min_index - 1)
+        else:
+            # Merge with next edge
+            edges[edge_min_index][1] = \
+                edges[(edge_min_index + 1) % len(edges)][1]
+            edges = numpy.delete(
+                edges,
+                (edge_min_index + 1) % len(edges),
+                axis=0
+            )
+            edges_lengths = numpy.delete(
+                edges_lengths,
+                (edge_min_index + 1) % len(edges)
+            )
+
+    # Re-add first vertex to close polygon
+    vertices_new = numpy.append(edges[:, 0], [edges[0][0]], axis=0)
+    return vertices_new
 
 
 def get_corners(shape):
@@ -164,10 +222,10 @@ def binarize(image, debugger, method='sauvola'):
         binarized_image = image > thresh_niblack
 
     elif method == 'gauss-diff':
-        sigma = gray_image.size // (2 ** 17)
-        high_frequencies = gray_image - gaussian(
-            image=gray_image,
-            sigma=sigma,
+        sigma = gray_image.size // (2 ** 16)
+        high_frequencies = np.subtract(
+            gray_image,
+            gaussian(image=gray_image, sigma=sigma,)
         )
         thresh = threshold_otsu(high_frequencies)
         binarized_image = high_frequencies > thresh
@@ -188,6 +246,9 @@ def binarize(image, debugger, method='sauvola'):
 
 
 def clear(binary_image, debugger):
+    """
+    Remove noise from border
+    """
     inverted_image = util.invert(binary_image)
     inverted_cleared_image = segmentation.clear_border(inverted_image)
     cleared_image = util.invert(inverted_cleared_image)
@@ -326,16 +387,16 @@ def transform_image(**kwargs):
 
             image_corners = get_corners(resized_image.shape)
 
-            scaled_gray_image = rgb2gray(resized_image)
-            debugger.save('scaled_gray', scaled_gray_image)
+            resized_gray_image = rgb2gray(resized_image)
+            debugger.save('resized_gray', resized_gray_image)
 
-            blurred = gaussian(scaled_gray_image, sigma=1)
+            blurred = gaussian(resized_gray_image, sigma=1)
             debugger.save('blurred', blurred)
 
-            markers = numpy.zeros_like(scaled_gray_image)
+            markers = numpy.zeros_like(resized_gray_image)
             center = (
-                scaled_gray_image.shape[0] // 2,
-                scaled_gray_image.shape[1] // 2
+                resized_gray_image.shape[0] // 2,
+                resized_gray_image.shape[1] // 2,
             )
             markers[(0, 0)] = 1
             markers[center] = 2
@@ -349,17 +410,87 @@ def transform_image(**kwargs):
             debugger.save('elevation_map', elevation_map)
 
             segmented_image = watershed(image=elevation_map, markers=markers)
-            debugger.save('segmented', label2rgb(segmented_image))
 
-            harris_image = corner_harris(segmented_image, sigma=5)
+            region_count = len(numpy.unique(segmented_image))
 
-            # `min_distance` prevents `image_corners` from being included
-            detected_corners = corner_peaks(harris_image, min_distance=5)
-            draw.set_color(harris_image, numpy.transpose(detected_corners), 0)
-            debugger.save('harris_corner', harris_image)
-            logging.info(f'Detected corners: {detected_corners}')
+            if region_count != 2:
+                logging.error(f'Expected 2 regions and not {region_count}')
+                return image
 
-            sorted_corners = get_sorted_corners(detected_corners)
+            debugger.save('segmented', segmented_image)
+
+            segmented_relabeled = segmented_image
+            segmented_relabeled[segmented_image == 1] = 0
+            segmented_relabeled[segmented_image == 2] = 1
+            segmented_closed = segmented_relabeled.astype(bool)
+
+            closing_diameter = 25
+            pad_width = 2 * closing_diameter
+
+            # Add border to avoid connection with image boundaries
+            segmented_closed_border = numpy.pad(
+                segmented_closed,
+                pad_width=pad_width,
+                mode='constant',
+                constant_values=False,
+            )
+
+            segmented_closed_border = morphology.binary_closing(
+                segmented_closed_border,
+                morphology.disk(closing_diameter),
+            )
+            # Remove border
+            segmented_closed = segmented_closed_border[
+                pad_width:-pad_width,
+                pad_width:-pad_width,
+            ]
+
+            # Convert False/True to 0/1
+            debugger.save('segmented_closed', segmented_closed.astype(int))
+
+            def get_harris_peaks(image, sigma=5, k=0.05):
+                img_harris = corner_harris(image, sigma=sigma, k=k)
+
+                # `min_distance` prevents `image_corners` from being included
+                peaks = corner_peaks(img_harris, min_distance=4)
+                draw.set_color(img_harris, numpy.transpose(peaks), 0)
+                debugger.save('harris_corner', img_harris)
+
+                return peaks
+
+            corners_second_pass = get_harris_peaks(
+                segmented_closed, sigma=4, k=0.04)
+
+            corners_orientation = feature.corner_orientations(
+                segmented_closed,
+                corners_second_pass,
+                morphology.octagon(3, 2),
+            )
+            logging.info(f'corners_orientation: {corners_orientation}')
+
+            indices = numpy.argsort(corners_orientation)
+            corners_sorted = corners_second_pass[indices]
+            logging.info(f'corners_sorted: {corners_sorted}')
+
+            polygon_simple = simplify_polygon(
+                numpy.append(corners_sorted, [corners_sorted[0]], axis=0),
+                targetCount=4,
+            )
+            logging.info(f'Simplified coordinates: {polygon_simple}')
+
+            rows, columns = draw.polygon_perimeter(
+                polygon_simple[:, 0],
+                polygon_simple[:, 1],
+            )
+            image_simplified = numpy.copy(segmented_image)
+            image_simplified[rows, columns] = 4
+            debugger.save('simplified', label2rgb(
+                image_simplified,
+                image=resized_image,  # Overlay over original image
+                bg_label=0,
+            ))
+
+            sorted_corners = get_sorted_corners(polygon_simple)
             logging.info(f'Sorted corners: {sorted_corners}')
 
             if not numpy.any(sorted_corners):

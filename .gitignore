@@ -3,5 +3,8 @@ dist
 *.egg-info
 __pycache__
 /examples
+/research
+/notebooks
 /app/SamplePhotoEditingExtension
 *.app
+.mypy_cache

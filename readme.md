@@ -1,6 +1,7 @@
 # Perspectra
 
-Extract and perspectively correct documents in images.
+Software and corresponding workflow to scan documents and books
+with as little hardware as possible.
 
 Check out [github:adius/awesome-scanning]
 for and extensive list of alternative solutions.
@@ -10,7 +11,31 @@ for and extensive list of alternative solutions.
 
 ## Best Practices for Taking the Photos
 
-TODO
+### Camera Settings
+
+```yaml
+# Rule of thumb is the inverse of your focal length,
+# but motion blur is pretty much the worst for readable documents,
+# therefore use at least half of it and never less than 1/50.
+shutter: 1/50 - 1/200 s
+
+# The whole document must be sharp even if you photograph it from an angle.
+# Therefore at least 8 f.
+aperture: 8-12 f
+
+# Noise is less bad than motion blur => relative high ISO
+# Should be the last thing you set:
+# As high as necessary as low as possible
+iso: 800-6400
+```
+
+When using `Tv` (Time Value) or `Av` (Aperture Value) mode
+use exposure compensation to set lightness value below 0.
+You really don't want to overexpose your photos as the bright pages
+are the first thing that clips.
+
+On the other hand,
+it doesn't matter if you loose background parts because they are to dark.
 
 
 ## Generating the Photos from a Video
@@ -60,8 +85,8 @@ scenedetect \
   --input page-turning.mp4 \
   --downscale-factor 2 \
   --detector content \
-  --min-scene-length 50 \
   --threshold 3 \
+  --min-scene-length 80 \
   --save-images
 ```
 
@@ -77,10 +102,19 @@ docker run \
   --input /video/page-turning.mp4 \
   --downscale-factor 2 \
   --detector content \
-  --threshold 5 \
+  --threshold 3 \
+  --min-scene-length 80 \
   --save-images <TODO: path>
 ```
 
 
 Aim for a low threshold and a long minimun scene length.
 I.e. turn the page really fast and show it for a long time.
+
+
+## TODO
+
+- Add a border around the image
+  so that watershed starts to flood the image from all directions
+  and to improve recognition for clipped documents
+- Implement https://github.com/scikit-image/scikit-image/issues/2212

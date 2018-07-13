@@ -111,3 +111,9 @@ python3 setup.py bdist_mac
 - Better algorithm for documents with rounded corners (e.g. credit cards)
 - Mention that file format is infered from file extension
 - Spread range after converting to grayscale
+- Checkout http://ilastik.org
+- Trim images before saving
+- Try out https://github.com/andrewssobral/bgslibrary
+- Try out https://github.com/Image-Py/imagepy
+- Try out https://github.com/WPIRoboticsProjects/GRIP/releases
+- Try out https://mybinder.org
