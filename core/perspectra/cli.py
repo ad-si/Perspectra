@@ -2,9 +2,9 @@ import os.path as path
 import argparse
 # import textwrap
 
-from .file_utils import renumber_pages
-from .transformer import transform_image
-from .binarize import binarize_image
+import file_utils
+import transformer
+import binarize
 
 
 def execute_arguments(arguments):
@@ -47,7 +47,7 @@ def execute_arguments(arguments):
         action='store_true',
         dest='shall_not_clear_border',
     )
-    parser_binarize.set_defaults(func=binarize_image)
+    parser_binarize.set_defaults(func=binarize.binarize_image)
 
     # Add subcommand 'correct'
     parser_correct = subparsers.add_parser(
@@ -90,7 +90,7 @@ def execute_arguments(arguments):
         metavar='image-path',
         help='Path to image which shall be fixed',
     )
-    parser_correct.set_defaults(func=transform_image)
+    parser_correct.set_defaults(func=transformer.transform_image)
 
     # Add subcommand 'renumber-pages'
     parser_rename = subparsers.add_parser(
@@ -105,7 +105,7 @@ def execute_arguments(arguments):
         metavar='book-directory',
         help='Path to directory containing the images of the pages',
     )
-    parser_rename.set_defaults(func=renumber_pages)
+    parser_rename.set_defaults(func=file_utils.renumber_pages)
 
     args = parser.parse_args(args=arguments)
 

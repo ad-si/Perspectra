@@ -6,29 +6,20 @@ import numpy
 
 import skimage
 from skimage import (
-    color,
-    draw,
-    exposure,
-    feature,
-    filters,
-    io,
     morphology,
     segmentation,
-    transform,
     util,
 )
 from skimage.color import rgb2gray
 from skimage.filters import (
     rank,
-    sobel,
     gaussian,
-    median,
     threshold_local,
     threshold_otsu,
     threshold_sauvola
 )
 from skimage.util import img_as_ubyte
-from .multipass_cleaner import remove_noise
+import multipass_cleaner
 
 
 class ImageDebugger:
@@ -66,7 +57,7 @@ def clear(binary_image, debugger):
 
 def denoise(binary_image, debugger):
     inverted_image = util.invert(binary_image)
-    inverted_denoised_image = remove_noise(inverted_image)
+    inverted_denoised_image = multipass_cleaner.remove_noise(inverted_image)
     denoised_image = util.invert(inverted_denoised_image)
     debugger.save('denoised_image', denoised_image)
 

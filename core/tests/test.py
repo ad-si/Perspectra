@@ -1,17 +1,10 @@
-import matplotlib
-import matplotlib.pyplot as plt
 
 import numpy as np
-import skimage
 from skimage import (
     color,
     draw,
-    exposure,
-    feature,
     filters,
     io,
-    measure,
-    morphology,
     segmentation,
     transform,
     util,
@@ -51,7 +44,7 @@ def level_image(border_width, spot_radius, elevation_image):
     shape_padded = tuple(value + (2 * border_width) for value in shape)
     elevation_padded = util.pad(elevation_image, border_width, 'constant')
     center = tuple(value / 2 for value in shape_padded)
-    rows, columns = draw.circle(center[0], center[1], spot_radius)
+    rows, columns = draw.circle_perimeter(center[0], center[1], spot_radius)
     elevation_padded[rows, columns] = 0.0
     return elevation_padded
 

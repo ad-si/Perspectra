@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "perspectra"
+version = "0.1.0"
+description = "Automatically extract documents from images and perspectively correct them"
+authors = ["Adrian Sieber <mail@adriansieber.com>"]
+license = "ISC"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^1.24.3"
+scikit-image = "^0.20.0"
+scikit-learn = "^1.2.2"
+matplotlib = "^3.7.1"
+shapely = "^2.0.1"
+simplification = "^0.6.11"
+jupyterlab-code-formatter = "^1.6.1"
+black = "^23.3.0"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 80

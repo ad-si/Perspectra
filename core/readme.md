@@ -117,3 +117,5 @@ python3 setup.py bdist_mac
 - Try out https://github.com/Image-Py/imagepy
 - Try out https://github.com/WPIRoboticsProjects/GRIP/releases
 - Try out https://mybinder.org
+- Read https://gilberttanner.com/blog/detectron2-train-a-instance-segmentation-model
+- Read https://www.pyimagesearch.com/2018/07/30/opencv-object-tracking/

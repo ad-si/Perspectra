@@ -8,8 +8,8 @@ import sys
 
 
 def main():
-    from .cli import execute_arguments
-    execute_arguments(sys.argv[1:])
+    import cli
+    cli.execute_arguments(sys.argv[1:])
 
 if __name__ == '__main__':
     main()

@@ -10,6 +10,8 @@ def split_pages(image: List[List[int]]) -> List[List[int]]:
     3. Split image
     """
 
+    index = 0
+    radius_step = 2
     cummulative_dilation_size = radius_step ** index
     cummulative_disk = morphology.disk(cummulative_dilation_size)
     print(f'Cummulative dilation size: {cummulative_dilation_size}')
@@ -26,23 +28,23 @@ def split_pages(image: List[List[int]]) -> List[List[int]]:
     print(f'Maximum noise size: {max_noise_size}')
 
     eroded = morphology.dilation(
-        cleaned_eroded,
+        image,
         selem=morphology.disk(current_dilation_size)
     )
 
-    if images:
-        images.append((f'eroded {index}', eroded))
+    # if images:
+    #     images.append((f'eroded {index}', eroded))
 
     cleaned_eroded = morphology.remove_small_objects(
         eroded,
         max_noise_size
     )
 
-    if images:
-        images.append((f'cleaned eroded {index}', cleaned_eroded))
+    # if images:
+    #     images.append((f'cleaned eroded {index}', cleaned_eroded))
 
-    cleaned_orig = numpy.logical_and(cleaned_orig, cleaned_eroded)
+    cleaned_orig = numpy.logical_and( image , cleaned_eroded)
 
     print(f'Finished cleaning pass {index}\n')
 
-    return [leftPage, rightPage]
+    return [] # TODO: [leftPage, rightPage]
