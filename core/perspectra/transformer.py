@@ -1,6 +1,8 @@
+import json
 import os
 import base64
 import logging
+from typing import Tuple
 
 import imageio.v3 as imageio
 import numpy
@@ -66,7 +68,7 @@ def load_image(file_name):
     return io.imread(file_path)
 
 
-def get_corners(shape):
+def get_img_corners(shape):
     rows = shape[0]
     colums = shape[1]
     return [
@@ -168,23 +170,26 @@ def get_point_angles_in_deg(points):
     return angles / numpy.pi * 180
 
 
-def get_shape_of_fixed_image(corners):
+def get_shape_of_fixed_image(corners: numpy.ndarray) -> Tuple[int, int, int]:
     # TODO: Use correct algorithm as described in the readme
+
+    def maximum(a, b):
+        return a if a > b else b
 
     top_edge_length = numpy.linalg.norm(corners[0] - corners[1])
     bottom_edge_length = numpy.linalg.norm(corners[2] - corners[3])
-    width = int(max(top_edge_length, bottom_edge_length))
+    width = int(maximum(top_edge_length, bottom_edge_length))
 
     left_edge_length = numpy.linalg.norm(corners[0] - corners[3])
     right_edge_length = numpy.linalg.norm(corners[1] - corners[2])
-    height = int(max(left_edge_length, right_edge_length))
+    height = int(maximum(left_edge_length, right_edge_length))
 
     return (height, width, 1)
 
 
 def get_fixed_image(image, detected_corners):
     shape_of_fixed_image = get_shape_of_fixed_image(detected_corners)
-    corners_of_fixed_image = get_corners(shape_of_fixed_image)
+    corners_of_fixed_image = get_img_corners(shape_of_fixed_image)
     projectiveTransform = transform.ProjectiveTransform()
     # Flip coordinates as estimate expects (x, y), but images are (row, column)
     projectiveTransform.estimate(
@@ -291,6 +296,214 @@ def erode(image, image_name, debugger):
     return eroded_image
 
 
+def get_doc_corners(debugger, output_base_path, image, **kwargs):
+    debug = kwargs.get("debug", False)
+    image_marked_path = kwargs.get("image_marked_path")
+    intermediate_height = 256
+
+    if image_marked_path:
+        if image_marked_path.endswith(("jpg", "jpeg")):
+            image_marked = imageio.imread(image_marked_path, exifrotate=True)
+        else:
+            # Can't replicate when gamma gets corrected => always ignore it
+            image_marked = imageio.imread(image_marked_path, ignoregamma=True)
+
+        # TODO: Scale image *before* doing any computations
+
+        image_gray = rgb2gray(image)
+        image_marked_gray = rgb2gray(image_marked)
+
+        # Use value > 0 in range 0 <= x <= 1 to ignore JPEG artifacts
+        diff_corner_image = abs(image_gray - image_marked_gray) > 0.05
+        debugger.save("diff_corner", diff_corner_image)
+
+        blobs = feature.blob_doh(
+            image=diff_corner_image,
+            min_sigma=5,
+        )
+
+        detected_corners = numpy.delete(blobs, 2, 1)
+        corners_normalized = get_sorted_corners(
+            image.shape,
+            detected_corners,
+        )
+
+        if not corners_normalized:
+            logging.warn("No corners detected")
+            return image
+
+    else:
+        scale_ratio = intermediate_height / image.shape[0]
+
+        resized_image = transform.resize(
+            image,
+            output_shape=(
+                intermediate_height,
+                # TODO: Scale all images to square size
+                int(image.shape[1] * scale_ratio),
+            ),
+            mode="reflect",
+            anti_aliasing=True,
+        )
+        debugger.save("resized", img_as_ubyte(resized_image))
+
+        resized_gray_image = rgb2gray(resized_image)
+        debugger.save("resized_gray", img_as_ubyte(resized_gray_image))
+
+        blurred = gaussian(resized_gray_image, sigma=1)
+        debugger.save("blurred", img_as_ubyte(blurred))
+
+        markers = numpy.zeros_like(resized_gray_image)
+        center = (
+            resized_gray_image.shape[0] // 2,
+            resized_gray_image.shape[1] // 2,
+        )
+        # TODO: User all 4 images corners as seeds and merge them
+        markers[(0, 0)] = 1
+        markers[center] = 2
+
+        elevation_map = sobel(blurred)
+
+        # Flatten elevation map at seed
+        # to avoid being trapped in a local minimum
+        rows, columns = draw.disk(center, 16)
+        elevation_map[rows, columns] = 0.0
+        debugger.save(
+            "elevation_map",
+            exposure.rescale_intensity(img_as_ubyte(elevation_map)),
+        )
+
+        segmented_image = watershed(image=elevation_map, markers=markers)
+
+        region_count = len(numpy.unique(segmented_image))
+
+        if region_count != 2:
+            logging.error(f"Expected 2 regions and not {region_count}")
+            return image
+
+        debugger.save(
+            "segmented",
+            img_as_ubyte(
+                label2rgb(segmented_image, image=resized_gray_image),
+            ),
+        )
+
+        segmented_relabeled = segmented_image
+        segmented_relabeled[segmented_image == 1] = 0
+        segmented_relabeled[segmented_image == 2] = 1
+        segmented_closed = segmented_relabeled.astype(bool)
+
+        closing_diameter = 25
+        pad_width = 2 * closing_diameter
+
+        # Add border to avoid connection with image boundaries
+        segmented_closed_border = numpy.pad(
+            segmented_closed,
+            pad_width=pad_width,
+            mode="constant",
+            constant_values=False,
+        )
+
+        segmented_closed_border = morphology.binary_closing(
+            segmented_closed_border,
+            morphology.disk(closing_diameter),
+        )
+        # Remove border
+        segmented_closed = segmented_closed_border[
+            pad_width:-pad_width,
+            pad_width:-pad_width,
+        ]
+
+        # Convert False/True to 0/1
+        debugger.save("segmented_closed", img_as_ubyte(segmented_closed))
+
+        # Use Foerstner corner detector
+        # as with Harris detector corners are shifted inwards
+        w, q = corner_foerstner(segmented_closed, sigma=2)
+        accuracy_thresh = 0.5
+        roundness_thresh = 0.3
+        foerstner = (q > roundness_thresh) * (w > accuracy_thresh) * w
+        foerstner_corners = corner_peaks(foerstner, min_distance=1)
+        logging.info(f"foerstner_corners: {foerstner_corners}")
+
+        # Render corners
+        empty_img = numpy.zeros_like(segmented_closed)
+        empty_img[foerstner_corners[:, 0], foerstner_corners[:, 1]] = 1
+        debugger.save("corner_foerstner", img_as_ubyte(empty_img))
+
+        foerstner_corners_sorted = get_sorted_corners(
+            segmented_closed.shape,
+            foerstner_corners,
+        )
+
+        logging.info(f"foerstner corners sorted: {foerstner_corners_sorted}")
+
+        point_angles_in_deg = get_point_angles_in_deg(
+            foerstner_corners_sorted,
+        )
+        logging.info(f"point_angles_in_deg: {point_angles_in_deg}")
+
+        point_angles_abs = numpy.abs(point_angles_in_deg)
+
+        # Get the indices of the sorted angles in descending order
+        point_angles_abs_sorted = numpy.argsort(point_angles_abs)[::-1]
+        logging.info(f"point_angles_abs_sorted {point_angles_abs_sorted}")
+
+        top_4_indices = point_angles_abs_sorted[:4]
+        # Sort the top 4 indices to maintain the original order
+        # in foerstner_corners_sorted
+        sorted_top_4_indices = np.sort(top_4_indices)
+
+        # Select the top 4 corners with the largest angle
+        # while maintaining their original order
+        corners_final = foerstner_corners_sorted[sorted_top_4_indices]
+
+        logging.info(f"corners_final: {corners_final}")
+
+        rows, columns = draw.polygon_perimeter(
+            corners_final[:, 0],
+            corners_final[:, 1],
+        )
+        image_simplified = numpy.copy(segmented_image)
+        image_simplified[rows, columns] = 4
+        debugger.save(
+            "simplified",
+            img_as_ubyte(
+                label2rgb(
+                    image_simplified,
+                    image=resized_image,  # Overlay over original image
+                    bg_label=0,
+                )
+            ),
+        )
+
+        if not numpy.any(corners_final):
+            return image
+
+        corners_normalized = numpy.divide(corners_final, scale_ratio)
+
+        # TODO: Compare with values stored in json files
+
+        return corners_normalized
+
+
+def setup_logger(output_base_path):
+    os.makedirs(output_base_path, exist_ok=True)
+    logging.basicConfig(
+        filename=os.path.join(output_base_path, "0-log.txt"),
+        level=logging.DEBUG,
+        format=" - ".join(
+            [
+                "%(asctime)s",
+                "%(pathname)s:%(lineno)s",
+                "%(levelname)s",
+                "%(name)s",
+                "%(message)s",
+            ]
+        ),
+    )
+
+
 def transform_image(**kwargs):
     input_image_path = kwargs.get("input_image_path")
 
@@ -302,39 +515,15 @@ def transform_image(**kwargs):
     output_in_gray = kwargs.get("output_in_gray", False)
     binarization_method = kwargs.get("binarization_method")
     shall_clear_border = not kwargs.get("shall_not_clear_border", False)
-    debug = kwargs.get("debug", False)
-    image_marked_path = kwargs.get("image_marked_path")
-    # adaptive = kwargs.get("adaptive")
-    intermediate_height = 256
 
     file_name_segments = os.path.splitext(os.path.basename(input_image_path))
     basename = file_name_segments[0]
-    # extension = file_name_segments[1]
-    random_string = (
-        base64.b64encode(os.urandom(3))
-        .decode("utf-8")
-        .replace("+", "-")
-        .replace("/", "_")
+    output_base_path = os.path.join(
+        os.path.dirname(input_image_path),
+        basename,
     )
 
-    output_base_path = os.path.join(os.path.dirname(input_image_path), basename)
-
-    # Settings for debugging
-    if debug:
-        os.makedirs(output_base_path, exist_ok=True)
-        logging.basicConfig(
-            filename=os.path.join(output_base_path, "0-log.txt"),
-            level=logging.DEBUG,
-            format=" - ".join(
-                [
-                    "%(asctime)s",
-                    "%(pathname)s:%(lineno)s",
-                    "%(levelname)s",
-                    "%(name)s",
-                    "%(message)s",
-                ]
-            ),
-        )
+    debug = kwargs.get("debug", False)
 
     # TODO: Accept lambda function which is only executed during debugging
     debugger = ImageDebugger(
@@ -342,243 +531,104 @@ def transform_image(**kwargs):
         base_path=output_base_path,
     )
 
+    if debug:
+        setup_logger(output_base_path)
+
+    if input_image_path.lower().endswith(("jpg", "jpeg")):
+        image = imageio.imread(input_image_path, exifrotate=True)
+    else:
+        # It's unclear under which circumstances gamma gets corrected
+        # => always ignore it
+        image = imageio.imread(input_image_path, ignoregamma=True)
+
+    corners = get_doc_corners(debugger, output_base_path, image)
+
+    dewarped_image = get_fixed_image(image, corners)
+    debugger.save("dewarped", img_as_ubyte(dewarped_image))
+
+    if output_in_gray:
+        grayscale_image = rgb2gray(dewarped_image)
+        image_norm_intensity = exposure.rescale_intensity(grayscale_image)
+        debugger.save("normalized_intensity", image_norm_intensity)
+        transformed_image = image_norm_intensity
+
+    elif binarization_method:
+        binarized_image = binarize(
+            image=dewarped_image,
+            method=binarization_method,
+            debugger=debugger,
+        )
+        if shall_clear_border:
+            cleared_image = clear(binarized_image, debugger)
+            erode(cleared_image, "cleared", debugger)
+            denoised_image = denoise(cleared_image, debugger)
+        else:
+            erode(binarized_image, "binarized", debugger)
+            denoised_image = denoise(binarized_image, debugger)
+
+        erode(denoised_image, "denoised", debugger)
+
+        transformed_image = denoised_image
+
+    # TODO: elif is_book:
+
+    else:
+        transformed_image = dewarped_image
+
+    random_string = (
+        base64.b64encode(os.urandom(3))
+        .decode("utf-8")
+        .replace("+", "-")
+        .replace("/", "_")
+    )
     output_image_path = (
         kwargs.get("output_image_path")
         or f"{output_base_path}-fixed_{random_string}.png"
     )
-
-    def get_transformed_image():
-        if input_image_path.lower().endswith(("jpg", "jpeg")):
-            image = imageio.imread(input_image_path, exifrotate=True)
-        else:
-            # It's unclear under which circumstances gamma gets corrected
-            # => always ignore it
-            image = imageio.imread(input_image_path, ignoregamma=True)
-
-        if image_marked_path:
-            if image_marked_path.endswith(("jpg", "jpeg")):
-                image_marked = imageio.imread(
-                    image_marked_path, exifrotate=True
-                )
-            else:
-                # Can't replicate when gamma gets corrected => always ignore it
-                image_marked = imageio.imread(
-                    image_marked_path, ignoregamma=True
-                )
-
-            # TODO: Scale image *before* doing any computations
-
-            image_gray = rgb2gray(image)
-            image_marked_gray = rgb2gray(image_marked)
-
-            # Use value > 0 in range 0 <= x <= 1 to ignore JPEG artifacts
-            diff_corner_image = abs(image_gray - image_marked_gray) > 0.05
-            debugger.save("diff_corner", diff_corner_image)
-
-            blobs = feature.blob_doh(
-                image=diff_corner_image,
-                min_sigma=5,
-            )
-
-            detected_corners = numpy.delete(blobs, 2, 1)
-            corners_normalized = get_sorted_corners(
-                image.shape,
-                detected_corners,
-            )
-
-            if not corners_normalized:
-                logging.warn("No corners detected")
-                return image
-
-        else:
-            scale_ratio = intermediate_height / image.shape[0]
-
-            resized_image = transform.resize(
-                image,
-                output_shape=(
-                    intermediate_height,
-                    # TODO: Scale all images to square size
-                    int(image.shape[1] * scale_ratio),
-                ),
-                mode="reflect",
-                anti_aliasing=True,
-            )
-            debugger.save("resized", img_as_ubyte(resized_image))
-
-            resized_gray_image = rgb2gray(resized_image)
-            debugger.save("resized_gray", img_as_ubyte(resized_gray_image))
-
-            blurred = gaussian(resized_gray_image, sigma=1)
-            debugger.save("blurred", img_as_ubyte(blurred))
-
-            markers = numpy.zeros_like(resized_gray_image)
-            center = (
-                resized_gray_image.shape[0] // 2,
-                resized_gray_image.shape[1] // 2,
-            )
-            # TODO: User all 4 images corners as seeds and merge them
-            markers[(0, 0)] = 1
-            markers[center] = 2
-
-            elevation_map = sobel(blurred)
-
-            # Flatten elevation map at seed
-            # to avoid being trapped in a local minimum
-            rows, columns = draw.disk(center, 16)
-            elevation_map[rows, columns] = 0.0
-            debugger.save(
-                "elevation_map",
-                exposure.rescale_intensity(img_as_ubyte(elevation_map)),
-            )
-
-            segmented_image = watershed(image=elevation_map, markers=markers)
-
-            region_count = len(numpy.unique(segmented_image))
-
-            if region_count != 2:
-                logging.error(f"Expected 2 regions and not {region_count}")
-                return image
-
-            debugger.save(
-                "segmented",
-                img_as_ubyte(
-                    label2rgb(segmented_image, image=resized_gray_image),
-                ),
-            )
-
-            segmented_relabeled = segmented_image
-            segmented_relabeled[segmented_image == 1] = 0
-            segmented_relabeled[segmented_image == 2] = 1
-            segmented_closed = segmented_relabeled.astype(bool)
-
-            closing_diameter = 25
-            pad_width = 2 * closing_diameter
-
-            # Add border to avoid connection with image boundaries
-            segmented_closed_border = numpy.pad(
-                segmented_closed,
-                pad_width=pad_width,
-                mode="constant",
-                constant_values=False,
-            )
-
-            segmented_closed_border = morphology.binary_closing(
-                segmented_closed_border,
-                morphology.disk(closing_diameter),
-            )
-            # Remove border
-            segmented_closed = segmented_closed_border[
-                pad_width:-pad_width,
-                pad_width:-pad_width,
-            ]
-
-            # Convert False/True to 0/1
-            debugger.save("segmented_closed", img_as_ubyte(segmented_closed))
-
-            # Use Foerstner corner detector
-            # as with Harris detector corners are shifted inwards
-            w, q = corner_foerstner(segmented_closed, sigma=2)
-            accuracy_thresh = 0.5
-            roundness_thresh = 0.3
-            foerstner = (q > roundness_thresh) * (w > accuracy_thresh) * w
-            foerstner_corners = corner_peaks(foerstner, min_distance=1)
-            logging.info(f"foerstner_corners: {foerstner_corners}")
-
-            # Render corners
-            empty_img = numpy.zeros_like(segmented_closed)
-            empty_img[foerstner_corners[:, 0], foerstner_corners[:, 1]] = 1
-            debugger.save("corner_foerstner", img_as_ubyte(empty_img))
-
-            foerstner_corners_sorted = get_sorted_corners(
-                segmented_closed.shape,
-                foerstner_corners,
-            )
-
-            logging.info(
-                f"foerstner corners sorted: {foerstner_corners_sorted}"
-            )
-
-            point_angles_in_deg = get_point_angles_in_deg(
-                foerstner_corners_sorted,
-            )
-            logging.info(f"point_angles_in_deg: {point_angles_in_deg}")
-
-            point_angles_abs = numpy.abs(point_angles_in_deg)
-
-            # Get the indices of the sorted angles in descending order
-            point_angles_abs_sorted = numpy.argsort(point_angles_abs)[::-1]
-            logging.info(f"point_angles_abs_sorted {point_angles_abs_sorted}")
-
-            top_4_indices = point_angles_abs_sorted[:4]
-            # Sort the top 4 indices to maintain the original order
-            # in foerstner_corners_sorted
-            sorted_top_4_indices = np.sort(top_4_indices)
-
-            # Select the top 4 corners with the largest angle
-            # while maintaining their original order
-            corners_final = foerstner_corners_sorted[sorted_top_4_indices]
-
-            logging.info(f"corners_final: {corners_final}")
-
-            rows, columns = draw.polygon_perimeter(
-                corners_final[:, 0],
-                corners_final[:, 1],
-            )
-            image_simplified = numpy.copy(segmented_image)
-            image_simplified[rows, columns] = 4
-            debugger.save(
-                "simplified",
-                img_as_ubyte(
-                    label2rgb(
-                        image_simplified,
-                        image=resized_image,  # Overlay over original image
-                        bg_label=0,
-                    )
-                ),
-            )
-
-            if not numpy.any(corners_final):
-                return image
-
-            corners_normalized = numpy.divide(corners_final, scale_ratio)
-
-            # TODO: Compare with values stored in json files
-
-        dewarped_image = get_fixed_image(image, corners_normalized)
-        debugger.save("dewarped", img_as_ubyte(dewarped_image))
-
-        # TODO: if is_book:
-
-        if output_in_gray:
-            grayscale_image = rgb2gray(dewarped_image)
-            image_norm_intensity = exposure.rescale_intensity(grayscale_image)
-            debugger.save("normalized_intensity", image_norm_intensity)
-            return image_norm_intensity
-
-        if binarization_method:
-            binarized_image = binarize(
-                image=dewarped_image,
-                method=binarization_method,
-                debugger=debugger,
-            )
-            if shall_clear_border:
-                cleared_image = clear(binarized_image, debugger)
-                erode(cleared_image, "cleared", debugger)
-                denoised_image = denoise(cleared_image, debugger)
-            else:
-                erode(binarized_image, "binarized", debugger)
-                denoised_image = denoise(binarized_image, debugger)
-
-            erode(denoised_image, "denoised", debugger)
-
-            return denoised_image
-
-        return dewarped_image
-
-    transformed_image = get_transformed_image()
 
     if not debug:
         imageio.imwrite(
             output_image_path,
             img_as_ubyte(transformed_image),
         )
+
+
+def print_corners(**kwargs):
+    input_image_path = kwargs.get("input_image_path")
+
+    if not input_image_path:
+        raise FileNotFoundError(
+            f"An input image and not {input_image_path} must be specified"
+        )
+
+    file_name_segments = os.path.splitext(os.path.basename(input_image_path))
+    basename = file_name_segments[0]
+    output_base_path = os.path.join(
+        os.path.dirname(input_image_path),
+        basename,
+    )
+
+    debug = kwargs.get("debug", False)
+
+    # TODO: Accept lambda function which is only executed during debugging
+    debugger = ImageDebugger(
+        level="debug" if debug else "",
+        base_path=output_base_path,
+    )
+
+    if debug:
+        setup_logger(output_base_path)
+
+    if input_image_path.lower().endswith(("jpg", "jpeg")):
+        image = imageio.imread(input_image_path, exifrotate=True)
+    else:
+        # It's unclear under which circumstances gamma gets corrected
+        # => always ignore it
+        image = imageio.imread(input_image_path, ignoregamma=True)
+
+    doc_corners = get_doc_corners(debugger, output_base_path, image)
+
+    # Origin is top left corner
+    corner_dicts = [{"x": corner[1], "y": corner[0]} for corner in doc_corners]
+    json_str = json.dumps(corner_dicts)
+    print(json_str)
