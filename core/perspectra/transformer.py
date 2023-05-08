@@ -302,11 +302,7 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
     intermediate_height = 256
 
     if image_marked_path:
-        if image_marked_path.endswith(("jpg", "jpeg")):
-            image_marked = imageio.imread(image_marked_path, exifrotate=True)
-        else:
-            # Can't replicate when gamma gets corrected => always ignore it
-            image_marked = imageio.imread(image_marked_path, ignoregamma=True)
+        image_marked = imageio.imread(image_marked_path, rotate=True)
 
         # TODO: Scale image *before* doing any computations
 
@@ -534,12 +530,7 @@ def transform_image(**kwargs):
     if debug:
         setup_logger(output_base_path)
 
-    if input_image_path.lower().endswith(("jpg", "jpeg")):
-        image = imageio.imread(input_image_path, exifrotate=True)
-    else:
-        # It's unclear under which circumstances gamma gets corrected
-        # => always ignore it
-        image = imageio.imread(input_image_path, ignoregamma=True)
+    image = imageio.imread(input_image_path, rotate=True)
 
     corners = get_doc_corners(debugger, output_base_path, image)
 
@@ -619,12 +610,7 @@ def print_corners(**kwargs):
     if debug:
         setup_logger(output_base_path)
 
-    if input_image_path.lower().endswith(("jpg", "jpeg")):
-        image = imageio.imread(input_image_path, exifrotate=True)
-    else:
-        # It's unclear under which circumstances gamma gets corrected
-        # => always ignore it
-        image = imageio.imread(input_image_path, ignoregamma=True)
+    image = imageio.imread(input_image_path, rotate=True)
 
     doc_corners = get_doc_corners(debugger, output_base_path, image)
 
