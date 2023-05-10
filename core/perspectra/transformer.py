@@ -32,7 +32,7 @@ from skimage.filters import (
 )
 from skimage.morphology import disk
 from skimage.segmentation import watershed
-from skimage.util import img_as_ubyte
+from skimage.util import img_as_ubyte, img_as_bool
 import multipass_cleaner
 
 
@@ -350,12 +350,14 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
         debugger.save("blurred", img_as_ubyte(blurred))
 
         markers = numpy.zeros_like(resized_gray_image)
+        markers[0, :] = 1  # Top row
+        markers[-1, :] = 1  # Bottom row
+        markers[:, 0] = 1  # Left column
+        markers[:, -1] = 1  # Right column
         center = (
             resized_gray_image.shape[0] // 2,
             resized_gray_image.shape[1] // 2,
         )
-        # TODO: User all 4 images corners as seeds and merge them
-        markers[(0, 0)] = 1
         markers[center] = 2
 
         elevation_map = sobel(blurred)
@@ -387,6 +389,8 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
         segmented_relabeled = segmented_image
         segmented_relabeled[segmented_image == 1] = 0
         segmented_relabeled[segmented_image == 2] = 1
+
+        # `img_as_bool` does not work here
         segmented_closed = segmented_relabeled.astype(bool)
 
         closing_diameter = 25
@@ -460,7 +464,7 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
             corners_final[:, 0],
             corners_final[:, 1],
         )
-        image_simplified = numpy.copy(segmented_image)
+        image_simplified = numpy.copy(segmented_closed).astype(int)
         image_simplified[rows, columns] = 4
         debugger.save(
             "simplified",
