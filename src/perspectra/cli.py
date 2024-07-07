@@ -3,9 +3,9 @@ import argparse
 
 # import textwrap
 
-import file_utils
-import transformer
-import binarize
+from perspectra import file_utils
+from perspectra import transformer
+from perspectra import binarize
 
 
 def execute_arguments(arguments):

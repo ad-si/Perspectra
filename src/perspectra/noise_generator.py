@@ -4,8 +4,8 @@ from skimage import morphology, util
 
 
 def add_noise(image):
-    base_radius = 2
-    base_disk = morphology.disk(base_radius)
+    # base_radius = 2
+    # base_disk = morphology.disk(base_radius)
     total_amount = 0.001
     empty_image = numpy.zeros_like(image)
 
@@ -13,11 +13,11 @@ def add_noise(image):
         image=empty_image,
         mode='salt',
         amount=total_amount,
-        seed=123,
+        rng=123,
     )
     closed_noise = morphology.binary_closing(
         image=noisy_img,
-        selem=morphology.disk(15)
+        footprint=morphology.disk(15)
     )
     labeled_noise = morphology.label(closed_noise)
     keep_percentage = 0.05
@@ -28,7 +28,7 @@ def add_noise(image):
         range(1, number_of_noise_blobs),
         int(number_of_noise_blobs * keep_percentage),
     )
-    filtered_noise = numpy.in1d(labeled_noise.flat, random_blob_labels)
+    filtered_noise = numpy.isin(labeled_noise.flat, random_blob_labels)
     reshaped_noise = filtered_noise.reshape(image.shape)
 
     return numpy.logical_or(reshaped_noise, image)

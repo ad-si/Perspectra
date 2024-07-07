@@ -1,12 +1,13 @@
+import os
 import math
-import numpy
-from skimage import io, util, feature, transform, filters, morphology
+from skimage import io, util, transform, filters, morphology
 from matplotlib import pyplot
 
 
 images = []
 
-original = io.imread('/Users/adrian/Projects/perspectra/examples/handheld-books/2/8-gray_image.png')
+img_path = os.path.join(os.path.dirname(__file__), "fixtures/book_gray.png")
+original = io.imread(img_path)
 inverted = util.invert(original)
 intermediate_height = 300
 scale_ratio = intermediate_height / inverted.shape[0]
@@ -28,7 +29,7 @@ images.append(('sobel_v', sobel_v))
 # sobel_v = filters.sobel_v(blurred)
 # images.append(('sobel_v', sobel_v))
 
-the_gradient = filters.rank.tophat(sobel_v, morphology.disk(10))
+the_gradient = morphology.black_tophat(sobel_v, morphology.disk(10))
 images.append(('gradient', the_gradient))
 
 # images.append(('threshold_adaptive', filters.threshold_adaptive(edge_image)))
@@ -62,4 +63,4 @@ for index, (title, image) in enumerate(images):
 #     ax[2].plot((p0[0], p1[0]), (p0[1], p1[1]))
 
 # fig.tight_layout()
-pyplot.show()
+pyplot.savefig("tests/test_splitting_out.png")

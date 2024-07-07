@@ -1,4 +1,4 @@
-
+import os
 import numpy as np
 from skimage import (
     color,
@@ -7,7 +7,6 @@ from skimage import (
     io,
     segmentation,
     transform,
-    util,
 )
 
 
@@ -42,20 +41,29 @@ def level_image(border_width, spot_radius, elevation_image):
     """
     shape = np.shape(elevation_image)
     shape_padded = tuple(value + (2 * border_width) for value in shape)
-    elevation_padded = util.pad(elevation_image, border_width, 'constant')
+    elevation_padded = np.pad(elevation_image, border_width, 'constant')
     center = tuple(value / 2 for value in shape_padded)
-    rows, columns = draw.circle_perimeter(center[0], center[1], spot_radius)
+    rows, columns = draw.circle_perimeter(
+        round(center[0]),
+        round(center[1]),
+        round(spot_radius)
+    )
     elevation_padded[rows, columns] = 0.0
     return elevation_padded
 
 
+imgs_path = os.path.join(os.path.dirname(__file__), "fixtures/*_color.jpeg")
 images = io.ImageCollection(
-    load_pattern='../../examples/photos/*/in.jpg',
+    load_pattern=imgs_path,
     conserve_memory=True,
 )
 
 offset = 1
-rand_img_index = np.random.randint(0, len(images) - offset)
+rand_img_index = (
+    np.random.randint(0, len(images) - offset)
+    if len(images) > offset
+    else 0
+)
 images = images[rand_img_index:rand_img_index + offset]
 images_gray = map(color.rgb2gray, images)
 images_scaled = map(
@@ -69,13 +77,16 @@ images_leveled = map(
     images_elevation,
 )
 images_segmented = map(
-    lambda img: segmentation.watershed(img, get_basin_mask(img)),
+    lambda img: segmentation.watershed(
+        img,
+        # TODO: Add missing markers
+        # markers=get_basin_mask(img)),
+    ),
     images_leveled,
 )
 
 images_final = list(images_segmented)
 
-# io.imshow_collection(images_scaled, plugin='matplotlib')
-# io.show()
-io.imshow_collection(images_final, plugin='matplotlib')
-io.show()
+# Save images:
+for i, img in enumerate(images_final):
+    io.imsave(f"tests/{i}_segmented.png", img)

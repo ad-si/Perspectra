@@ -1,28 +1,33 @@
-[tool.poetry]
-name = "perspectra"
+tool = { rye = { dev-dependencies = ["pytest>=8.2.2", "marimo>=0.7.0"] } }
+
+[project]
+name = "Perspectra"
 version = "0.1.0"
-description = "Automatically extract documents from images and perspectively correct them"
-authors = ["Adrian Sieber <mail@adriansieber.com>"]
-license = "ISC"
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "~3.11.3"
-numpy = "~1.24.3"
-scikit-image = "~0.20.0"
-scikit-learn = "~1.2.2"
-matplotlib = "~3.7.1"
-imageio = "~2.28.1"
-
-[tool.poetry.group.dev.dependencies]
-black = "~23.3.0"
-jupyterlab-code-formatter = "~1.6.1"
-mypy = "~1.2.0"
-nuitka = "~1.5.7"
+description = "Automatically extract and perspectively correct documents in images"
+readme = "readme.md"
+requires-python = ">=3.10"
+license = { text = "ISC" }
+authors = [{ name = "Adrian Sieber", email = "mail@adriansieber.com" }]
+keywords = ["document scanner", "perspective transformation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "Natural Language :: English",
+    "Environment :: Desktop",
+    "Intended Audience :: Prosumers",
+    "Operating System :: OS Independent",
+    "Topic :: Computer Vision",
+]
+urls = { "Homepage" = "http://github.com/feramhq/perspectra" }
+dependencies = [
+    "imageio>=2.1.0",
+    "matplotlib>=2.0.0",
+    "numpy>=2.0.0",
+    "scikit-image>=0.24.0",
+    "plotly>=5.22.0",
+    "pandas>=2.2.2",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 80
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"

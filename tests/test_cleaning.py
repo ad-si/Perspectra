@@ -1,11 +1,15 @@
+import os
 import math
 from skimage import io, util
+import matplotlib
 from matplotlib import pyplot
 from perspectra.multipass_cleaner import remove_noise
 from perspectra.noise_generator import add_noise
 
+matplotlib.use("Agg")
 
-original = util.invert(io.imread('../../examples/flickr-fixed.png'))
+img_path = os.path.join(os.path.dirname(__file__), "fixtures/doc_binary.png")
+original = util.invert(io.imread(img_path))
 images = []
 noisy_orig = add_noise(original)
 images.append(("Noisy Original", noisy_orig))
@@ -31,4 +35,4 @@ for index, (title, image) in enumerate(images):
     ax[index].axis("off")
 
 fig.tight_layout()
-pyplot.show()
+pyplot.savefig("tests/test_cleaning_out.png")

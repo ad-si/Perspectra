@@ -24,7 +24,7 @@ def remove_noise(
         current_dilation_size = radius_step ** (index - 1) \
             if index > 0 \
             else 1
-        dilation_disk = morphology.disk(current_dilation_size)
+        # dilation_disk = morphology.disk(current_dilation_size)
         logging.info(f'Current dilation size: {current_dilation_size}')
 
         # Noise blobs with up to 80 % more area
@@ -34,7 +34,7 @@ def remove_noise(
 
         eroded = morphology.dilation(
             cleaned_eroded,
-            selem=morphology.disk(current_dilation_size)
+            footprint=morphology.disk(current_dilation_size)
         )
 
         if images:

@@ -8,7 +8,7 @@ import sys
 
 
 def main():
-    import cli
+    from perspectra import cli
     cli.execute_arguments(sys.argv[1:])
 
 if __name__ == '__main__':

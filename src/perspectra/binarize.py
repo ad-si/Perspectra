@@ -19,7 +19,7 @@ from skimage.filters import (
     threshold_sauvola,
 )
 from skimage.util import img_as_ubyte
-import multipass_cleaner
+from perspectra import multipass_cleaner
 
 
 class ImageDebugger:

@@ -24,16 +24,14 @@ from skimage.feature import (
     corner_foerstner,
 )
 from skimage.filters import (
-    rank,
     sobel,
     gaussian,
     threshold_otsu,
     threshold_sauvola,
 )
-from skimage.morphology import disk
 from skimage.segmentation import watershed
-from skimage.util import img_as_ubyte, img_as_bool
-import multipass_cleaner
+from skimage.util import img_as_ubyte
+from perspectra import multipass_cleaner
 
 
 class ImageDebugger:
@@ -254,11 +252,12 @@ def binarize(image, debugger, method="sauvola"):
         binarized_image = high_frequencies > thresh
 
     elif method == "local-otsu":
-        warped_image_ubyte = img_as_ubyte(image)
-        selem = disk(radius)
-        local_otsu = rank.otsu(warped_image_ubyte, selem)
-        threshold_global_otsu = threshold_otsu(warped_image_ubyte)
-        binary_otsu = warped_image_ubyte >= local_otsu
+        print("TODO")
+        # warped_image_ubyte = img_as_ubyte(image)
+        # selem = disk(radius)
+        # local_otsu = rank.otsu(warped_image_ubyte, selem)
+        # threshold_global_otsu = threshold_otsu(warped_image_ubyte)
+        # binary_otsu = warped_image_ubyte >= local_otsu
 
     else:
         raise TypeError(f"{method} is no supported binarization method")
@@ -297,7 +296,7 @@ def erode(image, image_name, debugger):
 
 
 def get_doc_corners(debugger, output_base_path, image, **kwargs):
-    debug = kwargs.get("debug", False)
+    # debug = kwargs.get("debug", False)
     image_marked_path = kwargs.get("image_marked_path")
     intermediate_height = 256
 
