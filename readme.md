@@ -164,33 +164,3 @@ docker run \
 
 Aim for a low threshold and a long minimun scene length.
 I.e. turn the page really fast and show it for a long time.
-
-
-## TODO
-
-- [ ] Calculate aspect ratio of scanned document
-    and apply during perspective transformation
-- [ ] Make sure besin for watershed algorithm is in no local confinement
-- [ ] Add white border to sobel image or crop it by 1px in order
-    to correctly handle partly cropped documents
-- [ ] Check that there were at least 4 corners detected
-- [ ] Dewarp pages
-- [ ] Maximize contrast of image before binarizing
-- [ ] Make algorithms independent from photo sizes
-- [ ] Limit the kind of objects which get deleted when touching the border
-    (e.g. only elongated objects)
-- [ ] Better algorithm for documents with rounded corners (e.g. credit cards)
-- [ ] Mention that file format is infered from file extension
-- [ ] Spread range after converting to grayscale
-- [ ] Add a border around the image
-    so that watershed starts to flood the image from all directions
-    and to improve recognition for clipped documents
-- [ ] Implement https://github.com/scikit-image/scikit-image/issues/2212
-- [ ] Checkout http://ilastik.org
-- [ ] Trim images before saving
-- [ ] Try out https://github.com/andrewssobral/bgslibrary
-- [ ] Try out https://github.com/Image-Py/imagepy
-- [ ] Try out https://github.com/WPIRoboticsProjects/GRIP/releases
-- [ ] Try out https://mybinder.org
-- [ ] Read https://gilberttanner.com/blog/detectron2-train-a-instance-segmentation-model
-- [ ] Read https://www.pyimagesearch.com/2018/07/30/opencv-object-tracking/
