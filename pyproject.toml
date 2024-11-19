@@ -14,9 +14,9 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Natural Language :: English",
     "Environment :: Console",
-    "Intended Audience :: Prosumers",
+    "Intended Audience :: End Users/Desktop",
     "Operating System :: OS Independent",
-    "Topic :: Computer Vision",
+    "Topic :: Scientific/Engineering :: Image Recognition",
 ]
 urls = { "Homepage" = "http://github.com/feramhq/perspectra" }
 dependencies = [
