@@ -45,10 +45,11 @@ subcommands:
                         additional help
     binarize            Binarize image
     correct             Pespectively correct and crop photos of documents.
-    corners             Returns the corners of the document in the image
-                        as [top-left, top-right, bottom-right, bottom-left]
-    renumber-pages      Renames the images in a directory according to their page numbers.
-                        The assumend layout is `cover -> odd pages -> even pages reversed`
+    corners             Returns the corners of the document in the image as
+                        [top-left, top-right, bottom-right, bottom-left]
+    renumber-pages      Renames the images in a directory according to their
+                        page numbers. The assumend layout is `cover -> odd
+                        pages -> even pages reversed`
 ```
 
 

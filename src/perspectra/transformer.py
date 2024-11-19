@@ -585,6 +585,7 @@ def transform_image(**kwargs):
             output_image_path,
             img_as_ubyte(transformed_image),
         )
+        print(f"Saved corrected image at \"{output_image_path}\"")
 
 
 def print_corners(**kwargs):

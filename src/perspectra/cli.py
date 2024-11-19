@@ -64,6 +64,13 @@ def execute_arguments(arguments):
     parser_correct.add_argument(
         "--binary",
         help="Save image as binary image",
+        choices=[
+            "gauss-diff",
+            "local-otsu",
+            "local",
+            "niblack",
+            "sauvola",
+        ],
         dest="binarization_method",
     )
     parser_correct.add_argument(
