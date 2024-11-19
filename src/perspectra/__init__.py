@@ -1,1 +1,1 @@
-# This file is intentionally empty
+from perspectra.__main__ import main

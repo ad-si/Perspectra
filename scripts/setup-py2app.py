@@ -12,7 +12,7 @@ def read(*filenames, **kwargs):
 
 setup(
     name='perspectra',
-    version='0.1.0',
+    version='0.1.1',
     app=['perspectra/perspectra.py'],
     url='http://github.com/feramhq/perspectra',
     author='Adrian Sieber',

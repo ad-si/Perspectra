@@ -13,6 +13,11 @@ edit-notebooks:
 	rye run marimo edit notebooks
 
 
+.PHONY: install
+install:
+	uv venv && uv pip install --editable .
+
+
 # TODO: Re-enable this code
 # pyFiles := $(shell find core/perspectra -name '*.py')
 # # TODO: Slow startup time on first execution

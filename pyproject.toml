@@ -1,8 +1,8 @@
 tool = { rye = { dev-dependencies = ["pytest>=8.2.2", "marimo>=0.7.0"] } }
 
 [project]
-name = "Perspectra"
-version = "0.1.0"
+name = "perspectra"
+version = "0.1.1"
 description = "Automatically extract and perspectively correct documents in images"
 readme = "readme.md"
 requires-python = ">=3.10"
@@ -27,6 +27,9 @@ dependencies = [
     "plotly>=5.22.0",
     "pandas>=2.2.2",
 ]
+
+[project.scripts]
+perspectra = "perspectra:main"
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]
