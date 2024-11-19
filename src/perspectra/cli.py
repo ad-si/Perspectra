@@ -1,14 +1,8 @@
 import os.path as path
 import argparse
 
-# import textwrap
-
-from perspectra import file_utils
-from perspectra import transformer
-from perspectra import binarize
-
-
 def execute_arguments(arguments):
+    from perspectra import file_utils
     parser = argparse.ArgumentParser(prog="perspectra")
     parser.add_argument(
         "--debug",
@@ -48,7 +42,11 @@ def execute_arguments(arguments):
         action="store_true",
         dest="shall_not_clear_border",
     )
-    parser_binarize.set_defaults(func=binarize.binarize_image)
+    def binarize_handler(**kwargs):
+        from perspectra import binarize
+        binarize.binarize_image(**kwargs)
+
+    parser_binarize.set_defaults(func=binarize_handler)
 
     # Add subcommand 'correct'
     parser_correct = subparsers.add_parser(
@@ -91,7 +89,11 @@ def execute_arguments(arguments):
         metavar="image-path",
         help="Path to image which shall be fixed",
     )
-    parser_correct.set_defaults(func=transformer.transform_image)
+    def transform_handler(**kwargs):
+        from perspectra import transformer
+        transformer.transform_image(**kwargs)
+
+    parser_correct.set_defaults(func=transform_handler)
 
     # Add subcommand 'corners'
     parser_corners = subparsers.add_parser(
@@ -107,7 +109,11 @@ def execute_arguments(arguments):
         metavar="image-path",
         help="Path to image to find corners in",
     )
-    parser_corners.set_defaults(func=transformer.print_corners)
+    def corners_handler(**kwargs):
+        from perspectra import transformer
+        transformer.print_corners(**kwargs)
+
+    parser_corners.set_defaults(func=corners_handler)
 
     # Add subcommand 'renumber-pages'
     parser_rename = subparsers.add_parser(
@@ -122,7 +128,11 @@ def execute_arguments(arguments):
         metavar="book-directory",
         help="Path to directory containing the images of the pages",
     )
-    parser_rename.set_defaults(func=file_utils.renumber_pages)
+    def rename_handler(**kwargs):
+        from perspectra import file_utils
+        file_utils.renumber_pages(**kwargs)
+
+    parser_rename.set_defaults(func=rename_handler)
 
     args = parser.parse_args(args=arguments)
 

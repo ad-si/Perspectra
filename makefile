@@ -5,12 +5,12 @@ help: makefile
 
 .PHONY: test
 test:
-	rye test
+	uv run pytest
 
 
 .PHONY: edit-notebooks
 edit-notebooks:
-	rye run marimo edit notebooks
+	uv run marimo edit notebooks
 
 
 .PHONY: install

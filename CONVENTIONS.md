@@ -1,0 +1,1 @@
+- Always use `uv` for all project management tasks (e.g. `uv add`, `uv pip`, …)

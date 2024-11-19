@@ -13,3 +13,5 @@ __pycache__
 build
 dist
 tests/*.png
+.aider*
+.env
