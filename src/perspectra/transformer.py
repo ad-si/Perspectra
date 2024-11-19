@@ -68,11 +68,11 @@ def load_image(file_name):
 
 def get_img_corners(shape):
     rows = shape[0]
-    colums = shape[1]
+    cols = shape[1]
     return [
         (0, 0),
-        (0, colums - 1),
-        (rows - 1, colums - 1),
+        (0, cols - 1),
+        (rows - 1, cols - 1),
         (rows - 1, 0),
     ]
 
@@ -128,7 +128,7 @@ def get_sorted_corners(img_size, corners):
            [234,  47],
            [ 44,  30]])
     """
-    # Shift coordinate sytem
+    # Shift coordinate system
     # TODO: Find centroid of corners instead of using image center
     rowOffset = img_size[0] / 2
     colOffset = img_size[1] / 2
@@ -363,8 +363,8 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
 
         # Flatten elevation map at seed
         # to avoid being trapped in a local minimum
-        rows, columns = draw.disk(center, 16)
-        elevation_map[rows, columns] = 0.0
+        rows, cols = draw.disk(center, 16)
+        elevation_map[rows, cols] = 0.0
         debugger.save(
             "elevation_map",
             exposure.rescale_intensity(img_as_ubyte(elevation_map)),
@@ -459,12 +459,12 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
 
         logging.info(f"corners_final: {corners_final}")
 
-        rows, columns = draw.polygon_perimeter(
+        rows, cols = draw.polygon_perimeter(
             corners_final[:, 0],
             corners_final[:, 1],
         )
         image_simplified = numpy.copy(segmented_closed).astype(int)
-        image_simplified[rows, columns] = 4
+        image_simplified[rows, cols] = 4
         debugger.save(
             "simplified",
             img_as_ubyte(

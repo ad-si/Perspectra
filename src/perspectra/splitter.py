@@ -12,9 +12,9 @@ def split_pages(image: List[List[int]]) -> List[List[int]]:
 
     index = 0
     radius_step = 2
-    cummulative_dilation_size = radius_step ** index
-    cummulative_disk = morphology.disk(cummulative_dilation_size)
-    print(f'Cummulative dilation size: {cummulative_dilation_size}')
+    cumulative_dilation_size = radius_step ** index
+    cumulative_disk = morphology.disk(cumulative_dilation_size)
+    print(f'Cumulative dilation size: {cumulative_dilation_size}')
 
     current_dilation_size = radius_step ** (index - 1) \
         if index > 0 \
@@ -24,7 +24,7 @@ def split_pages(image: List[List[int]]) -> List[List[int]]:
 
     # Noise blobs with up to 80 % more area
     # than the structuring element will get deleted
-    max_noise_size = numpy.count_nonzero(cummulative_disk) * 1.5
+    max_noise_size = numpy.count_nonzero(cumulative_disk) * 1.5
     print(f'Maximum noise size: {max_noise_size}')
 
     # eroded = morphology.dilation(

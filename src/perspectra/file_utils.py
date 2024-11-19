@@ -1,6 +1,6 @@
 """
 Renames the images in a directory according to their pages number.
-The assumend layout is `cover -> odd pages -> even pages reversed`.
+The assumed layout is `cover -> odd pages -> even pages reversed`.
 The cover gets the page number 0.
 
 For example a book with 9 content pages and a cover starting at image 23:

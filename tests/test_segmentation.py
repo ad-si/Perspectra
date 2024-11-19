@@ -70,8 +70,8 @@ images_scaled = map(
     lambda img: scale_image(image_shape, img),
     images_gray,
 )
-images_blured = map(filters.gaussian, images_scaled)
-images_elevation = map(filters.sobel, images_blured)
+images_blurred = map(filters.gaussian, images_scaled)
+images_elevation = map(filters.sobel, images_blurred)
 images_leveled = map(
     lambda img: level_image(border_width, spot_radius, img),
     images_elevation,

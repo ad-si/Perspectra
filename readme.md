@@ -4,7 +4,7 @@ Software and corresponding workflow to scan documents and books
 with as little hardware as possible.
 
 Check out [github:adius/awesome-scanning]
-for and extensive list of alternative solutions.
+for an extensive list of alternative solutions.
 
 [github:adius/awesome-scanning]: https://github.com/adius/awesome-scanning
 
@@ -55,7 +55,7 @@ subcommands:
     corners             Returns the corners of the document in the image as
                         [top-left, top-right, bottom-right, bottom-left]
     renumber-pages      Renames the images in a directory according to their
-                        page numbers. The assumend layout is `cover -> odd
+                        page numbers. The assumed layout is `cover -> odd
                         pages -> even pages reversed`
 ```
 
@@ -169,5 +169,5 @@ docker run \
   --save-images <TODO: path>
 ```
 
-Aim for a low threshold and a long minimun scene length.
+Aim for a low threshold and a long minimum scene length.
 I.e. turn the page really fast and show it for a long time.

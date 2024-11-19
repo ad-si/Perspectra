@@ -142,7 +142,7 @@ def __(cartesian_to_polar, np):
                [234,  47],
                [ 44,  30]])
         """
-        # Shift coordinate sytem
+        # Shift coordinate system
         rowOffset = img_size[0] / 2
         colOffset = img_size[1] / 2
 

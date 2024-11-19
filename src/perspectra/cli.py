@@ -127,7 +127,7 @@ def execute_arguments(arguments):
         "renumber-pages",
         help="""
             Renames the images in a directory according to their page numbers.
-            The assumend layout is `cover -> odd pages -> even pages reversed`
+            The assumed layout is `cover -> odd pages -> even pages reversed`
         """,
     )
     parser_rename.add_argument(

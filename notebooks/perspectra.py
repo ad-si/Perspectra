@@ -76,12 +76,12 @@ def __(circle, numpy):
 
     def get_fixed_image(image, corners):
         rows = image.shape[0]
-        colums = round(image.shape[1])
+        cols = round(image.shape[1])
         src_corners = [
             (0, 0),
             (0, rows),
-            (colums, rows),
-            (colums, 0),
+            (cols, rows),
+            (cols, 0),
         ]
 
         protrans = transform.ProjectiveTransform()

@@ -17,9 +17,9 @@ def remove_noise(
     radius_step = 2
 
     for index in range(passes):
-        cummulative_dilation_size = radius_step ** index
-        cummulative_disk = morphology.disk(cummulative_dilation_size)
-        logging.info(f'Cummulative dilation size: {cummulative_dilation_size}')
+        cumulative_dilation_size = radius_step ** index
+        cumulative_disk = morphology.disk(cumulative_dilation_size)
+        logging.info(f'Cumulative dilation size: {cumulative_dilation_size}')
 
         current_dilation_size = radius_step ** (index - 1) \
             if index > 0 \
@@ -29,7 +29,7 @@ def remove_noise(
 
         # Noise blobs with up to 80 % more area
         # than the structuring element will get deleted
-        max_noise_size = numpy.count_nonzero(cummulative_disk) * 1.5
+        max_noise_size = numpy.count_nonzero(cumulative_disk) * 1.5
         logging.info(f'Maximum noise size: {max_noise_size}')
 
         eroded = morphology.dilation(
