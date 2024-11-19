@@ -9,6 +9,13 @@ for and extensive list of alternative solutions.
 [github:adius/awesome-scanning]: https://github.com/adius/awesome-scanning
 
 
+Command | Input | Result
+--------|-------|-------
+`perspectra correct --binary=gauss-diff 01.jpeg`|![Receipt 1](images/examples/01_original.jpeg)|![Receipt 1 binarized](images/examples/01_binary.png)
+`perspectra correct --binary=gauss-diff 02.jpeg`|![Receipt 2](images/examples/02_original.jpeg)|![Receipt 2 binarized](images/examples/02_binary.png)
+`perspectra correct --gray 03.jpeg`|![Receipt 3](images/examples/03_original.jpeg)|![Receipt 3 grayscale](images/examples/03_gray.png)
+
+
 ## Installation
 
 We recommend to use [`uv`](https://docs.astral.sh/uv/)

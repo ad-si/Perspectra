@@ -13,6 +13,16 @@ test:
 	uv run pytest
 
 
+.PHONY: test-receipts
+test-receipts:
+	cd examples/receipts && \
+	rm -f *-corrected.jpeg && \
+	ls *.jpeg | while read -r file; do \
+		echo "Correcting $$file"; \
+		uv run perspectra correct $$file --output $${file%.*}-corrected.jpeg; \
+	done
+
+
 .PHONY: edit-notebooks
 edit-notebooks:
 	uv run marimo edit notebooks
