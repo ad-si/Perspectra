@@ -9,6 +9,16 @@ for and extensive list of alternative solutions.
 [github:adius/awesome-scanning]: https://github.com/adius/awesome-scanning
 
 
+## Installation
+
+We recommend to use [`uv`](https://docs.astral.sh/uv/)
+instead of `pip` to install the package.
+
+```bash
+uv tool install perspectra
+```
+
+
 ## Usage
 
 ### Command Line Interface
