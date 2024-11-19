@@ -13,7 +13,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Development Status :: 3 - Alpha",
     "Natural Language :: English",
-    "Environment :: Desktop",
+    "Environment :: Console",
     "Intended Audience :: Prosumers",
     "Operating System :: OS Independent",
     "Topic :: Computer Vision",

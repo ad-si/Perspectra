@@ -26,7 +26,7 @@ setup(
         'Programming Language :: Python',
         'Development Status :: Beta',
         'Natural Language :: English',
-        'Environment :: Desktop',
+        'Environment :: X11 Applications',
         'Intended Audience :: Prosumers',
         'Operating System :: OS Independent',
         'Topic :: Image Manipulation',
