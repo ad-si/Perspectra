@@ -14,7 +14,7 @@ setup(
     name='perspectra',
     version='0.1.1',
     app=['perspectra/perspectra.py'],
-    url='http://github.com/feramhq/perspectra',
+    url='http://github.com/ad-si/Perspectra',
     author='Adrian Sieber',
     author_email='adrian@feram.co',
     description='Extract and perspectively correct documents in images',

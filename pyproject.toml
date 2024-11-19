@@ -3,7 +3,7 @@ name = "perspectra"
 version = "0.1.1"
 description = "Automatically extract and perspectively correct documents in images"
 readme = "readme.md"
-requires-python = ">=3.12.7"
+requires-python = ">=3.12"
 license = { text = "ISC" }
 authors = [{ name = "Adrian Sieber", email = "mail@adriansieber.com" }]
 keywords = ["document scanner", "perspective transformation"]
@@ -16,7 +16,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Image Recognition",
 ]
-urls = { "Homepage" = "http://github.com/feramhq/perspectra" }
+urls = { "Homepage" = "http://github.com/ad-si/Perspectra" }
 dependencies = [
     "imageio>=2.36.0",
     "matplotlib>=3.9.2",

@@ -14,8 +14,16 @@ for and extensive list of alternative solutions.
 We recommend to use [`uv`](https://docs.astral.sh/uv/)
 instead of `pip` to install the package.
 
-```bash
+```sh
 uv tool install perspectra
+```
+
+To install from source:
+
+```sh
+git clone https://github.com/ad-si/Perspectra
+cd Perspectra
+make install
 ```
 
 

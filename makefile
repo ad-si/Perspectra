@@ -15,7 +15,7 @@ edit-notebooks:
 
 .PHONY: install
 install:
-	uv venv && uv pip install --editable .
+	uv venv && uv tool install --editable .
 
 
 # TODO: Re-enable this code
