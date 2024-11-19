@@ -348,7 +348,7 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
         blurred = gaussian(resized_gray_image, sigma=1)
         debugger.save("blurred", img_as_ubyte(blurred))
 
-        markers = numpy.zeros_like(resized_gray_image)
+        markers = numpy.zeros_like(resized_gray_image, dtype=int)
         markers[0, :] = 1  # Top row
         markers[-1, :] = 1  # Bottom row
         markers[:, 0] = 1  # Left column
