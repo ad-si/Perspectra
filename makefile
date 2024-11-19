@@ -3,6 +3,11 @@ help: makefile
 	@tail -n +4 makefile | grep ".PHONY"
 
 
+.PHONY: build
+build:
+	uv build
+
+
 .PHONY: test
 test:
 	uv run pytest
@@ -15,7 +20,17 @@ edit-notebooks:
 
 .PHONY: install
 install:
-	uv venv && uv tool install --editable .
+	uv tool install --editable .
+
+
+.PHONY: uninstall
+uninstall:
+	uv tool uninstall perspectra
+
+
+.PHONY: publish
+publish: build
+	uv publish
 
 
 # TODO: Re-enable this code

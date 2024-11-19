@@ -1,4 +1,6 @@
 __pycache__
+.aider*
+.env
 .ipynb_checkpoints
 .jupyter
 .mypy_cache
@@ -12,6 +14,5 @@ __pycache__
 /research
 build
 dist
+notebooks_wolfram
 tests/*.png
-.aider*
-.env
