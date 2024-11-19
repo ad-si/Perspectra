@@ -69,3 +69,4 @@ clean:
 	rm -rf dist
 	rm -rf perspectra.spec
 	rm -rf src/perspectra/__pycache__
+	rm -rf src/perspectra/.mypy_cache

@@ -1,7 +1,7 @@
 from perspectra import binarize
 import numpy as np
 
-def test_binarize():
+def test_binarize_grayscale_image():
     debugger = binarize.ImageDebugger(
         level="",
         base_path="",
