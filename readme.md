@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> This project is in maintenance mode.
+> Any further development will be carried out in its successor project
+> [FlatCV](https://github.com/ad-si/FlatCV).
+
+---
+
 # Perspectra
 
 Software and corresponding workflow to scan documents and books
