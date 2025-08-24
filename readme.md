@@ -3,10 +3,10 @@
 Software and corresponding workflow to scan documents and books
 with as little hardware as possible.
 
-Check out [github:adius/awesome-scanning]
+Check out [github:ad-si/awesome-scanning]
 for an extensive list of alternative solutions.
 
-[github:adius/awesome-scanning]: https://github.com/adius/awesome-scanning
+[github:ad-si/awesome-scanning]: https://github.com/ad-si/awesome-scanning
 
 
 Command | Input | Result
