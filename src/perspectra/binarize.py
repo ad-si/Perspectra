@@ -20,7 +20,7 @@ from skimage.filters import (
 )
 from skimage.util import img_as_ubyte
 from perspectra import multipass_cleaner
-from perspectra.transformer import read_image
+from perspectra.transformer import read_image, setup_logger
 
 
 class ImageDebugger:
@@ -43,7 +43,7 @@ class ImageDebugger:
         self.step_counter += 1
         imageio.imwrite(
             os.path.join(self.base_path, f"{self.step_counter}-{name}.png"),
-            image,
+            img_as_ubyte(image),
         )
         return self
 
@@ -191,9 +191,13 @@ def binarize_image(**kwargs):
         base_path=output_base_path,
     )
 
+    if debug:
+        setup_logger(output_base_path)
+
     binarized_image = get_binarized_image(
         input_image_path, binarization_method, shall_clear_border, debugger
     )
 
     if not debug:
-        imageio.imwrite(output_image_path, binarized_image)
+        imageio.imwrite(output_image_path, img_as_ubyte(binarized_image))
+        print(f"Saved binarized image at \"{output_image_path}\"")

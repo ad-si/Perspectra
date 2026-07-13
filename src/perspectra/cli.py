@@ -33,7 +33,15 @@ def execute_arguments(arguments):
     )
     parser_binarize.add_argument(
         "--method",
-        help="Save image as binary image",
+        help="Binarization method to use",
+        choices=[
+            "gauss-diff",
+            "local-otsu",
+            "local",
+            "niblack",
+            "sauvola",
+        ],
+        default="sauvola",
         dest="binarization_method",
     )
     parser_binarize.add_argument(
