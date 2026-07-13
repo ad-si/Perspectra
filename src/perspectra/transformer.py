@@ -66,6 +66,16 @@ def load_image(file_name):
     return io.imread(file_path)
 
 
+def read_image(image_path):
+    try:
+        # `rotate` applies the EXIF orientation,
+        # but is only supported by the Pillow plugin
+        return imageio.imread(image_path, rotate=True)
+    except TypeError:
+        # Plugins like tifffile reject the `rotate` keyword argument
+        return imageio.imread(image_path)
+
+
 def get_img_corners(shape):
     rows = shape[0]
     cols = shape[1]
@@ -301,7 +311,7 @@ def get_doc_corners(debugger, output_base_path, image, **kwargs):
     intermediate_height = 256
 
     if image_marked_path:
-        image_marked = imageio.imread(image_marked_path, rotate=True)
+        image_marked = read_image(image_marked_path)
 
         # TODO: Scale image *before* doing any computations
 
@@ -533,7 +543,7 @@ def transform_image(**kwargs):
     if debug:
         setup_logger(output_base_path)
 
-    image = imageio.imread(input_image_path, rotate=True)
+    image = read_image(input_image_path)
 
     corners = get_doc_corners(debugger, output_base_path, image)
 
@@ -614,7 +624,7 @@ def print_corners(**kwargs):
     if debug:
         setup_logger(output_base_path)
 
-    image = imageio.imread(input_image_path, rotate=True)
+    image = read_image(input_image_path)
 
     doc_corners = get_doc_corners(debugger, output_base_path, image)
 

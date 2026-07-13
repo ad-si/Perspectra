@@ -20,6 +20,7 @@ from skimage.filters import (
 )
 from skimage.util import img_as_ubyte
 from perspectra import multipass_cleaner
+from perspectra.transformer import read_image
 
 
 class ImageDebugger:
@@ -139,7 +140,7 @@ def get_binarized_image(
     shall_clear_border,
     debugger,
 ):
-    image = imageio.imread(input_image_path, rotate=True)
+    image = read_image(input_image_path)
 
     binarized_image = binarize(
         image=image,
