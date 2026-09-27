@@ -7,6 +7,7 @@ from skimage import (
     io,
     segmentation,
     transform,
+    util,
 )
 
 
@@ -89,4 +90,7 @@ images_final = list(images_segmented)
 
 # Save images:
 for i, img in enumerate(images_final):
-    io.imsave(f"tests/{i}_segmented.png", img)
+    io.imsave(
+        f"tests/{i}_segmented.png",
+        util.img_as_ubyte(color.label2rgb(img, bg_label=0)),
+    )
