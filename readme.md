@@ -40,13 +40,18 @@ cd Perspectra
 make install
 ```
 
+The `extract-pages` subcommand additionally requires
+[`ffmpeg`](https://ffmpeg.org) to be available in your `PATH`
+(e.g. via `brew install ffmpeg`).
+
 
 ## Usage
 
 ### Command Line Interface
 
 ```txt
-usage: perspectra [-h] [--debug] {binarize,correct,corners,renumber-pages} ...
+usage: perspectra [-h] [--debug]
+                  {binarize,correct,corners,renumber-pages,extract-pages} ...
 
 options:
   -h, --help            show this help message and exit
@@ -55,7 +60,7 @@ options:
 subcommands:
   subcommands to handle files and correct photos
 
-  {binarize,correct,corners,renumber-pages}
+  {binarize,correct,corners,renumber-pages,extract-pages}
                         additional help
     binarize            Binarize image
     correct             Pespectively correct and crop photos of documents.
@@ -64,6 +69,10 @@ subcommands:
     renumber-pages      Renames the images in a directory according to their
                         page numbers. The assumed layout is `cover -> odd
                         pages -> even pages reversed`
+    extract-pages       Extract a photo of each page from a video of a book
+                        being flipped through. A page is captured whenever a
+                        short clicking sound (e.g. a tongue pop) is made while
+                        the page is held in focus.
 ```
 
 
@@ -109,7 +118,31 @@ it doesn't matter if you loose background parts because they are to dark.
 
 ### Generating the Photos from a Video
 
-A good tool for this purpose is [PySceneDetect].
+Film yourself flipping through the book
+and make a short clicking sound whenever a page is held still in focus.
+A tongue pop works best, as it leaves both hands free
+for holding the camera and turning the pages.
+The `extract-pages` subcommand then saves the sharpest frame
+at each of these moments:
+
+```sh
+perspectra extract-pages book.mov --output book_pages
+```
+
+The pages are saved as `page-001.png`, `page-002.png`, …
+in the `--output` directory
+(default: `<video-name>_pages` next to the video).
+
+The rustling of the pages is ignored,
+as a click must start abruptly out of relative silence,
+decay quickly, and be about as loud as the other clicks.
+All levels are measured relative to the background noise,
+so this also works in noisy environments.
+Use `perspectra --debug extract-pages …` to print the detected sounds
+and adjust the thresholds (`--min-contrast`, `--min-decay`, …)
+if pages are missed or extracted twice.
+
+Alternatively, you can use [PySceneDetect].
 It's a Python/OpenCV-based scene detection program,
 using threshold/content analysis on a given video.
 
